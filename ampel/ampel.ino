@@ -7,6 +7,8 @@ int ledPin_G2 = 7;
 
 int buttonPin = 8;
 
+int tonePin = 3;
+
 boolean strasse1offen = true;
 
 boolean buttonPressed = false;
@@ -19,7 +21,16 @@ void setup() {
   pinMode(ledPin_G1,OUTPUT);
   pinMode(ledPin_G2,OUTPUT);
   pinMode(buttonPin,INPUT);
-  gruen(strasse1offen);
+  
+  tone(tonePin, 262);
+  delay(45),
+  tone(tonePin, 294);
+  delay(45),
+  tone(tonePin, 330);
+  delay(45),
+  noTone(tonePin);
+  
+  gruen(strasse1offen);  
 }
 
 void loop() {
@@ -54,6 +65,9 @@ void rot() {
 }
 
 void gelb(boolean strasse) {
+  tone(tonePin, 4400);
+  delay(25),
+  noTone(tonePin);
   led(
   strasse ? LOW : HIGH, strasse ? HIGH : LOW, LOW,
   strasse ? HIGH : LOW, strasse ? LOW : HIGH, LOW,
@@ -68,6 +82,11 @@ void rotgelb(boolean strasse) {
 }
 
 void gruen(boolean strasse) {
+    
+  tone(tonePin, 440);
+  delay(50),
+  noTone(tonePin);
+
   led(
   strasse ? LOW : HIGH, LOW, strasse ? HIGH : LOW,
   strasse ? HIGH : LOW, LOW, strasse ? LOW : HIGH,
