@@ -9,8 +9,10 @@ int buttonPin = 8;
 
 int tonePin = 3;
 
-boolean strasse1offen = true;
+float sinTime = 0;
 
+boolean strasse1offen = true;
+ 
 boolean buttonPressed = false;
 
 void setup() {
@@ -34,6 +36,16 @@ void setup() {
 }
 
 void loop() {
+  
+  if(digitalRead(buttonPin)==HIGH)
+  {
+    tone(tonePin, sin(sinTime * 3.14f) * 500 + 940);
+    sinTime += 0.01f;
+    delay(15);
+    if(sinTime > 1)
+      sinTime = sinTime -1.0f;
+  }
+  
   if ((digitalRead(buttonPin)==HIGH)&&(buttonPressed==false)){
     buttonPressed=true;
   } 
@@ -41,6 +53,7 @@ void loop() {
     buttonPressed=false;
     gelb(strasse1offen);
     rot();
+    delay(500);
     strasse1offen = !strasse1offen;
     rotgelb(strasse1offen);
     gruen(strasse1offen);
