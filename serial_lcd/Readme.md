@@ -1,0 +1,1 @@
+A LC-display with additional 10 LED on a serial port.
