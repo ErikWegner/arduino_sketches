@@ -56,7 +56,7 @@ void loop() {
     }
   } 
   else {
-    delay(20);
+    delay(2);
   }
 }
 
@@ -73,12 +73,12 @@ void processRING(String s) {
     sep1 = s.indexOf(',');
     sep2 = s.indexOf(',', sep1 + 1);
     sep3 = s.indexOf(',', sep2 + 2);
-    Serial.print("sep1: ");
+    /*Serial.print("sep1: ");
     Serial.print(sep1);
     Serial.print(" sep2: ");
     Serial.print(sep2);
     Serial.print(" sep3: ");
-    Serial.println(sep3);
+    Serial.println(sep3);*/
    
     int led = s.substring(0, sep1).toInt();
     int red = s.substring(sep1+1, sep2).toInt();
