@@ -30,6 +30,23 @@ Funktionen
 
 
 void setup() {
+    /* der RTC-DCF benötigt ca. 1,5 Sekunden bis er Daten empfangen kann */
+  delay(1500);  
+
+  /* den Pin für den periodischen Interrupt als Eingang und als externe
+     Interrupt-Quelle definieren */
+  pinMode(RTC_DCF_PER_INT_PIN, INPUT);
+  PCintPort::attachInterrupt(RTC_DCF_PER_INT_PIN, &periodicInterrupt, FALLING);
+  
+  /* RTC-DCF initialisieren */  
+  RTC_DCF.begin();
+
+  RTC_DCF.enableDCF77Reception();
+  RTC_DCF.enableDCF77LED();
+
+    /* der RTC-DCF benötigt ca. 1,5 Sekunden bis er Daten empfangen kann */
+  //delay(1500);  
+
   // put your setup code here, to run once:
   pinMode(ledPin, OUTPUT);
 
@@ -47,19 +64,11 @@ void setup() {
   FourDigitLedDisplay.testDisplaySegments(1);
   
   // nach einer Sekunde den Segmenttest beenden
-  delay(1000);
+  delay(500);
   FourDigitLedDisplay.testDisplaySegments(0);
+  
 
-    /* der RTC-DCF benötigt ca. 1,5 Sekunden bis er Daten empfangen kann */
-  delay(500);  
-  
-  /* den Pin für den periodischen Interrupt als Eingang und als externe
-     Interrupt-Quelle definieren */
-  pinMode(RTC_DCF_PER_INT_PIN, INPUT);
-  PCintPort::attachInterrupt(RTC_DCF_PER_INT_PIN, &periodicInterrupt, FALLING);
-  
-  /* RTC-DCF initialisieren */  
-  RTC_DCF.begin();
+
 
   /* den periodischen Interrupt auf 1 Hz einstellen */
   RTC_DCF.setPeriodicInterruptMode(RTC_PERIODIC_INT_PULSE_2_HZ);
@@ -72,6 +81,7 @@ void setup() {
 
   /* Interrupts einschalten */  
   interrupts();
+  Serial.println("Start");
 }
 
 void loop() {
@@ -80,7 +90,7 @@ if(periodicInterruptFlag == 1)
   {
     RTC_DCF.getDateTime(&dateTime);
     
-    printClock();
+    if (showSeparator > 0) printClock();
     updateLED();
  
     periodicInterruptFlag = 0;
