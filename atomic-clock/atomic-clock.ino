@@ -20,6 +20,8 @@ DateTime dateTime;
 /* Flag zur Anzeige eines periodischen Interrupts */
 volatile uint8_t periodicInterruptFlag = 0; 
 
+#define SOUND_PIN    9
+
 #define PIXEL_PIN    8    // Digital IO pin connected to the NeoPixels.
 #define PIXEL_COUNT 12
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(PIXEL_COUNT, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
@@ -89,8 +91,8 @@ void setup() {
   for (int s = 0; s < 256; s++) {
     rainbowCycle(s);
     delay(12);
-  }
 
+  }
 
   /* den Pin für den periodischen Interrupt als Eingang und als externe
      Interrupt-Quelle definieren */
@@ -159,12 +161,15 @@ void prepareSecondPins() {
   for (int i = 0; i < 6; i++) {
     pinMode(secondPins[i], OUTPUT);
     digitalWrite(secondPins[i], HIGH);
+    tone(SOUND_PIN, 240 + i*10);
     delay(50);
   }
   for (int i = 0; i < 6; i++) {
     digitalWrite(secondPins[i], LOW);
+    tone(SOUND_PIN, 240 + i*10);
     delay(50);
   }
+  noTone(SOUND_PIN);
 }
 
 
