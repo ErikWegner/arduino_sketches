@@ -9,6 +9,8 @@ const uint8_t i2cAddressSAA1064 = 0x70;
 #include "RealTimeClock_DCF.h"
 #include "PinChangeInt.h"
 
+#include <Adafruit_NeoPixel.h>
+
 /******************************************************************************
 globale Variablen
 ******************************************************************************/
@@ -18,6 +20,9 @@ DateTime dateTime;
 /* Flag zur Anzeige eines periodischen Interrupts */
 volatile uint8_t periodicInterruptFlag = 0; 
 
+#define PIXEL_PIN    8    // Digital IO pin connected to the NeoPixels.
+#define PIXEL_COUNT 12
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(PIXEL_COUNT, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
 /* Soll der Punkt angezeigt werden: */
 volatile int8_t showSeparator = 1;
@@ -27,6 +32,8 @@ int ledPin = 13;
 /* binary leds for seconds */
 int secondPins[] ={ 2,3,4,5,6,7 };
 
+
+byte rainbowState = 0;
 /******************************************************************************
 Funktionen
 ******************************************************************************/
@@ -56,7 +63,9 @@ uint8_t dcf[4]= {0x0, ledsegments[13], ledsegments[12], ledsegments[15]};
 
 void setup() {
   prepareSecondPins();
-
+  strip.begin();
+  strip.show();
+  
 // I2C-Modul initialisieren
   Wire.begin();
   
@@ -76,7 +85,12 @@ void setup() {
   LedDriver.writeDigits(SAA1064::SUBADDRESS_DIGIT_1, dcf, 4);
   
     /* der RTC-DCF benötigt ca. 1,5 Sekunden bis er Daten empfangen kann */
-  delay(1000);  
+  //delay(1000);
+  for (int s = 0; s < 256; s++) {
+    rainbowCycle(s);
+    delay(12);
+  }
+
 
   /* den Pin für den periodischen Interrupt als Eingang und als externe
      Interrupt-Quelle definieren */
@@ -120,6 +134,10 @@ if(periodicInterruptFlag == 1)
  
     periodicInterruptFlag = 0;
   }
+  
+  rainbowCycle(rainbowState);
+  rainbowState = (rainbowState + 1) % 256;
+  delay(20);
 }
 
 void periodicInterrupt(void)
@@ -147,6 +165,31 @@ void prepareSecondPins() {
     digitalWrite(secondPins[i], LOW);
     delay(50);
   }
+}
+
+
+// Input a value 0 to 255 to get a color value.
+// The colours are a transition r - g - b - back to r.
+uint32_t Wheel(byte WheelPos) {
+  WheelPos = 255 - WheelPos;
+  if(WheelPos < 85) {
+   return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+  } else if(WheelPos < 170) {
+    WheelPos -= 85;
+   return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+  } else {
+   WheelPos -= 170;
+   return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+  }
+}
+
+// Slightly different, this makes the rainbow equally distributed throughout
+void rainbowCycle(byte state) {
+  uint16_t i;
+  for(i=0; i< strip.numPixels(); i++) {
+    strip.setPixelColor(i, Wheel(((i * 256 / strip.numPixels()) + state) & 255));
+  }
+  strip.show();
 }
 
 void updateLED(void)
