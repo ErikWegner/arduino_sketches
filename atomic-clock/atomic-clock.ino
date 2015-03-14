@@ -24,31 +24,38 @@ volatile int8_t showSeparator = 1;
 
 /* onboard led */
 int ledPin = 13; 
+/* binary leds for seconds */
+int secondPins[] ={ 2,3,4,5,6,7 };
+
 /******************************************************************************
 Funktionen
 ******************************************************************************/
 
 
+unsigned char ledsegments[] =
+{
+    0x3f,     // 0
+    0x06,     // 1
+    0x5b,     // 2
+    0x4f,     // 3
+    0x66,     // 4
+    0x6d,     // 5
+    0x7d,     // 6
+    0x07,     // 7
+    0x7f,     // 8
+    0x6f,     // 9
+    0x77,     // A
+    0x7c,     // B
+    0x58,     // C
+    0x5e,     // D
+    0x79,     // E
+    0x71      // F
+};
+uint8_t dcf[4]= {0x0, ledsegments[13], ledsegments[12], ledsegments[15]};
+
+
 void setup() {
-    /* der RTC-DCF benötigt ca. 1,5 Sekunden bis er Daten empfangen kann */
-  delay(1500);  
-
-  /* den Pin für den periodischen Interrupt als Eingang und als externe
-     Interrupt-Quelle definieren */
-  pinMode(RTC_DCF_PER_INT_PIN, INPUT);
-  PCintPort::attachInterrupt(RTC_DCF_PER_INT_PIN, &periodicInterrupt, FALLING);
-  
-  /* RTC-DCF initialisieren */  
-  RTC_DCF.begin();
-
-  RTC_DCF.enableDCF77Reception();
-  RTC_DCF.enableDCF77LED();
-
-    /* der RTC-DCF benötigt ca. 1,5 Sekunden bis er Daten empfangen kann */
-  //delay(1500);  
-
-  // put your setup code here, to run once:
-  pinMode(ledPin, OUTPUT);
+  prepareSecondPins();
 
 // I2C-Modul initialisieren
   Wire.begin();
@@ -66,9 +73,27 @@ void setup() {
   // nach einer Sekunde den Segmenttest beenden
   delay(500);
   FourDigitLedDisplay.testDisplaySegments(0);
+  LedDriver.writeDigits(SAA1064::SUBADDRESS_DIGIT_1, dcf, 4);
   
+    /* der RTC-DCF benötigt ca. 1,5 Sekunden bis er Daten empfangen kann */
+  delay(1000);  
 
+  /* den Pin für den periodischen Interrupt als Eingang und als externe
+     Interrupt-Quelle definieren */
+  pinMode(RTC_DCF_PER_INT_PIN, INPUT);
+  PCintPort::attachInterrupt(RTC_DCF_PER_INT_PIN, &periodicInterrupt, FALLING);
+  
+  /* RTC-DCF initialisieren */  
+  RTC_DCF.begin();
 
+  RTC_DCF.enableDCF77Reception();
+  RTC_DCF.enableDCF77LED();
+
+    /* der RTC-DCF benötigt ca. 1,5 Sekunden bis er Daten empfangen kann */
+  //delay(1500);  
+
+  // put your setup code here, to run once:
+  pinMode(ledPin, OUTPUT);
 
   /* den periodischen Interrupt auf 1 Hz einstellen */
   RTC_DCF.setPeriodicInterruptMode(RTC_PERIODIC_INT_PULSE_2_HZ);
@@ -112,28 +137,22 @@ void printClock(void)
   Serial.println(clockString);  
 }
 
-unsigned char ledsegments[] =
-{
-    0x3f,     // 0
-    0x06,     // 1
-    0x5b,     // 2
-    0x4f,     // 3
-    0x66,     // 4
-    0x6d,     // 5
-    0x7d,     // 6
-    0x07,     // 7
-    0x7f,     // 8
-    0x6f,     // 9
-    0x77,     // A
-    0x7c,     // B
-    0x58,     // C
-    0x5e,     // D
-    0x79,     // E
-    0x71      // F
-};
+void prepareSecondPins() {
+  for (int i = 0; i < 6; i++) {
+    pinMode(secondPins[i], OUTPUT);
+    digitalWrite(secondPins[i], HIGH);
+    delay(50);
+  }
+  for (int i = 0; i < 6; i++) {
+    digitalWrite(secondPins[i], LOW);
+    delay(50);
+  }
+}
 
 void updateLED(void)
 {
+  
+  // update 7 segment display
   uint8_t digits[4] = {0x00, 0x00, 0x00, 0x00};
 
   uint8_t d = dateTime.getHour();
@@ -146,5 +165,13 @@ void updateLED(void)
 //  FourDigitLedDisplay.writeDecimal(dateTime.getHour() * 100 + dateTime.getMinute(), showSeparator > 0 ? 2 : 0);
   LedDriver.writeDigits(SAA1064::SUBADDRESS_DIGIT_1, digits, 4);
   
+  // blink onboard led
   digitalWrite(ledPin, showSeparator > 0 ? HIGH : LOW);
+  
+  // show seconds in binary form on additional led
+  int seconds = dateTime.getSecond();
+  for (int i = 5; i >= 0; i--) {
+    digitalWrite(secondPins[i], seconds % 2 == 1);
+    seconds /= 2;
+  }
 }
