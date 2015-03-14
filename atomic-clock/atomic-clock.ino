@@ -25,6 +25,14 @@ volatile uint8_t periodicInterruptFlag = 0;
 #define PIXEL_PIN    8    // Digital IO pin connected to the NeoPixels.
 #define PIXEL_COUNT 12
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(PIXEL_COUNT, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
+#define PIXEL_MAX   32
+uint8_t subsecondStripColor[][3] = {
+  {PIXEL_MAX, 0, 0},
+  {PIXEL_MAX, PIXEL_MAX, 0},
+  {0, PIXEL_MAX, 0},
+  {0, 0, PIXEL_MAX},
+  {PIXEL_MAX, PIXEL_MAX, PIXEL_MAX}
+};
 
 /* Soll der Punkt angezeigt werden: */
 volatile int8_t showSeparator = 1;
@@ -131,15 +139,17 @@ if(periodicInterruptFlag == 1)
   {
     RTC_DCF.getDateTime(&dateTime);
     
-    if (showSeparator > 0) printClock();
-    updateLED();
- 
+    if (showSeparator > 0) {
+      printClock();
+      updateLED();
+      updateStrip();
+    }
     periodicInterruptFlag = 0;
   }
   
-  rainbowCycle(rainbowState);
+  /*rainbowCycle(rainbowState);
   rainbowState = (rainbowState + 1) % 256;
-  delay(20);
+  delay(20);*/
 }
 
 void periodicInterrupt(void)
@@ -161,7 +171,7 @@ void prepareSecondPins() {
   for (int i = 0; i < 6; i++) {
     pinMode(secondPins[i], OUTPUT);
     digitalWrite(secondPins[i], HIGH);
-    tone(SOUND_PIN, 240 + i*10);
+    tone(SOUND_PIN, 140 + i*10);
     delay(50);
   }
   for (int i = 0; i < 6; i++) {
@@ -222,4 +232,15 @@ void updateLED(void)
     digitalWrite(secondPins[i], seconds % 2 == 1);
     seconds /= 2;
   }
+}
+
+void updateStrip() {
+  Serial.print("updateString ... ");
+  int seconds = dateTime.getSecond();
+  uint8_t* pixelcolor = subsecondStripColor[seconds % 5];
+  strip.clear();
+  strip.setPixelColor(0, PIXEL_MAX/4, 0, 0);
+  strip.setPixelColor(seconds / 5, (uint8_t)pixelcolor[0], (uint8_t)pixelcolor[1], (uint8_t)pixelcolor[2]);
+  strip.show();
+  Serial.println("done");
 }
