@@ -242,7 +242,10 @@ void updateStrip() {
   int seconds = dateTime.getSecond();
   uint8_t* pixelcolor = subsecondStripColor[seconds % 5];
   strip.clear();
-  strip.setPixelColor(0, PIXEL_MAX/4, 0, 0);
+  strip.setPixelColor(2, 0, PIXEL_MAX/8, 0);
+  strip.setPixelColor(5, 0, PIXEL_MAX/8, 0);
+  strip.setPixelColor(8, 0, PIXEL_MAX/8, 0);
+  strip.setPixelColor(11, PIXEL_MAX/8, 0, 0);
   strip.setPixelColor(seconds / 5, (uint8_t)pixelcolor[0], (uint8_t)pixelcolor[1], (uint8_t)pixelcolor[2]);
   strip.show();
   Serial.println("done");
