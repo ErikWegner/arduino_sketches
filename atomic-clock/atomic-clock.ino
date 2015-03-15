@@ -139,9 +139,10 @@ if(periodicInterruptFlag == 1)
   {
     RTC_DCF.getDateTime(&dateTime);
     
+    updateLED();
     if (showSeparator > 0) {
       printClock();
-      updateLED();
+      updateSecondLED();
       updateStrip();
     }
     periodicInterruptFlag = 0;
@@ -225,7 +226,9 @@ void updateLED(void)
   
   // blink onboard led
   digitalWrite(ledPin, showSeparator > 0 ? HIGH : LOW);
-  
+}
+
+void updateSecondLED() {
   // show seconds in binary form on additional led
   int seconds = dateTime.getSecond();
   for (int i = 5; i >= 0; i--) {
