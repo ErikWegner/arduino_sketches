@@ -1,6 +1,7 @@
 #include "Wire.h"
 #include "I2C_4DLED.h"
 #include "utility/SAA1064.h"
+#include "MCP9801.h"
 
 const uint8_t i2cAddressSAA1064 = 0x70;
 
@@ -58,6 +59,13 @@ const uint8_t pinSecButton        = 7;
 const uint8_t pinCalendarButton   = 6;
 const uint8_t pinTempButton       = 5;
 const uint8_t pinOffButton        = 4;
+const uint8_t i2cAddressMCP9801   = 0x90;
+int32_t temperature = 0;
+
+// Helligkeitsstufe
+uint8_t brightness = 0;
+// Ausgangsstrom des SAA1064
+I2C_4DLED::OutputCurrent outputCurrent = I2C_4DLED::OUTPUT_CURRENT_3_MA;
 
 byte rainbowState = 0;
 /******************************************************************************
@@ -97,7 +105,7 @@ void setup() {
   
   // 4-Digit-LED-Anzeige mit I2C-Adresse des SAA1064 initialisieren
   FourDigitLedDisplay.begin(i2cAddressSAA1064);
-  FourDigitLedDisplay.setDisplayOutputCurrent(I2C_4DLED::OUTPUT_CURRENT_3_MA);
+  FourDigitLedDisplay.setDisplayOutputCurrent(outputCurrent);
   
   // alle im SAA1064 gespeicherten Digits löschen
   FourDigitLedDisplay.clearDisplay();
@@ -110,11 +118,23 @@ void setup() {
   FourDigitLedDisplay.testDisplaySegments(0);
   LedDriver.writeDigits(SAA1064::SUBADDRESS_DIGIT_1, dcf, 4);
   
+  // Temperatursensor mit I2C-Adresse des MCP9801 initialisieren
+  TemperatureSensor.begin(i2cAddressMCP9801);
+  
+  // Temperatursensor auf eine Auflösung von 12 Bit umschalten
+  TemperatureSensor.setADCResolution(TemperatureSensor.RESOLUTION_12BIT);
+  
+
+  
   pinMode(pinSecButton, INPUT);
   pinMode(pinCalendarButton, INPUT);
+  pinMode(pinTempButton, INPUT);
+  pinMode(pinOffButton, INPUT);
   
   digitalWrite(pinSecButton, HIGH);
   digitalWrite(pinCalendarButton, HIGH);
+  digitalWrite(pinTempButton, HIGH);
+  digitalWrite(pinOffButton, HIGH);
   
     /* der RTC-DCF benötigt ca. 1,5 Sekunden bis er Daten empfangen kann */
   //delay(1000);
@@ -187,6 +207,21 @@ void loop() {
     backToClockModeCounter = BACKTOCLOCKMODEDELAY;
   }
   
+  if(digitalRead(pinTempButton) == 0) {
+    delay(200);
+    if (segmentMode == segmentModeTemp) {
+      segmentMode = segmentModeClock;
+    } else {
+      segmentMode = segmentModeTemp;
+      backToClockModeCounter = 0;
+    }
+  }
+  
+  if(digitalRead(pinOffButton) == 0) {
+    adjustBrightness();
+  }
+  
+  delay(50);
 }
 
 void periodicInterrupt(void)
@@ -270,15 +305,19 @@ void updateLED(void)
     case segmentModeCalendar:
       d = dateTime.getDay();
       if (d > 9) digits[0] = ledsegments[d / 10];
-      digits[1] = ledsegments[d % 10] | (showSeparator > 0 ? 128 : 0);
+      digits[1] = ledsegments[d % 10] | 128;
       
       d = dateTime.getMonth();
       if (d > 9) digits[2] = ledsegments[d / 10];
-      digits[3] = ledsegments[d % 10];
+      digits[3] = ledsegments[d % 10] | 128;
       break;
-      
+    case segmentModeTemp:
+      temperature = TemperatureSensor.readTemperature();
+      FourDigitLedDisplay.writeDecimal( (temperature + 500) / 1000, 1 );
+
+      break;
   }
-  LedDriver.writeDigits(SAA1064::SUBADDRESS_DIGIT_1, digits, 4);
+  if (segmentMode != segmentModeTemp) LedDriver.writeDigits(SAA1064::SUBADDRESS_DIGIT_1, digits, 4);
   
   // blink onboard led
   digitalWrite(ledPin, showSeparator > 0 ? HIGH : LOW);
@@ -305,4 +344,43 @@ void updateStrip() {
   strip.setPixelColor(seconds / 5, (uint8_t)pixelcolor[0], (uint8_t)pixelcolor[1], (uint8_t)pixelcolor[2]);
   strip.show();
   Serial.println("done");
+}
+
+void adjustBrightness() {
+  brightness = (brightness + 1) % 5;
+  // je nach aktueller Helligkeit den Ausgangstrom einstellen
+  switch(brightness)
+  {
+  case 0:
+    outputCurrent = I2C_4DLED::OUTPUT_CURRENT_0_MA;
+    break;
+    
+  case 1:
+    outputCurrent = I2C_4DLED::OUTPUT_CURRENT_3_MA;
+    break;
+
+  case 2:
+    outputCurrent = I2C_4DLED::OUTPUT_CURRENT_6_MA;
+    break;
+
+  case 3:
+    outputCurrent = I2C_4DLED::OUTPUT_CURRENT_9_MA;
+    break;
+
+  case 4:
+    outputCurrent = I2C_4DLED::OUTPUT_CURRENT_12_MA;
+    break;
+  
+  default:
+    brightness = 0;
+    break; 
+  }
+  
+  // Ausgangsstrom dem SAA1064 übergeben
+  FourDigitLedDisplay.setDisplayOutputCurrent(outputCurrent);
+
+  tone(SOUND_PIN, 244);
+  delay(20);
+  noTone(SOUND_PIN);
+  delay(180);
 }
