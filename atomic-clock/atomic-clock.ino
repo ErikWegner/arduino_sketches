@@ -40,8 +40,24 @@ volatile int8_t showSeparator = 1;
 /* onboard led */
 int ledPin = 13; 
 /* binary leds for seconds */
-int secondPins[] ={ 2,3,4,5,6,7 };
+//int secondPins[] ={ 0,1,2,3,10,11 };
 
+/* 7 segment mode */
+#define segmentModeOff      0
+#define segmentModeClock    1
+#define segmentModeSeconds  2
+#define segmentModeTemp     3
+#define segmentModeCalendar 4
+byte segmentMode = segmentModeClock;
+byte backToClockModeCounter = 0;
+
+// 5 Seconds with 2Hz until we go back to clock
+#define BACKTOCLOCKMODEDELAY 10
+
+const uint8_t pinSecButton        = 7;
+const uint8_t pinCalendarButton   = 6;
+const uint8_t pinTempButton       = 5;
+const uint8_t pinOffButton        = 4;
 
 byte rainbowState = 0;
 /******************************************************************************
@@ -72,7 +88,7 @@ uint8_t dcf[4]= {0x0, ledsegments[13], ledsegments[12], ledsegments[15]};
 
 
 void setup() {
-  prepareSecondPins();
+  //prepareSecondPins();
   strip.begin();
   strip.show();
   
@@ -93,6 +109,12 @@ void setup() {
   delay(500);
   FourDigitLedDisplay.testDisplaySegments(0);
   LedDriver.writeDigits(SAA1064::SUBADDRESS_DIGIT_1, dcf, 4);
+  
+  pinMode(pinSecButton, INPUT);
+  pinMode(pinCalendarButton, INPUT);
+  
+  digitalWrite(pinSecButton, HIGH);
+  digitalWrite(pinCalendarButton, HIGH);
   
     /* der RTC-DCF benötigt ca. 1,5 Sekunden bis er Daten empfangen kann */
   //delay(1000);
@@ -135,22 +157,36 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-if(periodicInterruptFlag == 1)
+  if(periodicInterruptFlag == 1)
   {
     RTC_DCF.getDateTime(&dateTime);
     
     updateLED();
     if (showSeparator > 0) {
       printClock();
-      updateSecondLED();
+      //updateSecondLED();
       updateStrip();
     }
+    if (backToClockModeCounter > 0) backToClockModeCounter--;
     periodicInterruptFlag = 0;
   }
   
-  /*rainbowCycle(rainbowState);
-  rainbowState = (rainbowState + 1) % 256;
-  delay(20);*/
+  if (backToClockModeCounter == 1) {
+    // the last counter resets the segment mode.
+    segmentMode = segmentModeClock;
+    // when we turn off the segments, we set backToClockModeCounter directly to 0 to avoid the switch back
+  }
+  
+  if(digitalRead(pinSecButton) == 0) {
+    segmentMode = segmentModeSeconds;
+    backToClockModeCounter = BACKTOCLOCKMODEDELAY;
+  }
+  
+  if(digitalRead(pinCalendarButton) == 0) {
+    segmentMode = segmentModeCalendar;
+    backToClockModeCounter = BACKTOCLOCKMODEDELAY;
+  }
+  
 }
 
 void periodicInterrupt(void)
@@ -168,7 +204,7 @@ void printClock(void)
   Serial.println(clockString);  
 }
 
-void prepareSecondPins() {
+/*void prepareSecondPins() {
   for (int i = 0; i < 6; i++) {
     pinMode(secondPins[i], OUTPUT);
     digitalWrite(secondPins[i], HIGH);
@@ -181,7 +217,7 @@ void prepareSecondPins() {
     delay(50);
   }
   noTone(SOUND_PIN);
-}
+}*/
 
 
 // Input a value 0 to 255 to get a color value.
@@ -214,28 +250,48 @@ void updateLED(void)
   // update 7 segment display
   uint8_t digits[4] = {0x00, 0x00, 0x00, 0x00};
 
-  uint8_t d = dateTime.getHour();
-  if (d > 9) digits[0] = ledsegments[d / 10];
-  digits[1] = ledsegments[d % 10] | (showSeparator > 0 ? 128 : 0);
-  
-  d = dateTime.getMinute();
-  digits[2] = ledsegments[d / 10];
-  digits[3] = ledsegments[d % 10];
-//  FourDigitLedDisplay.writeDecimal(dateTime.getHour() * 100 + dateTime.getMinute(), showSeparator > 0 ? 2 : 0);
+  switch (segmentMode) {
+    uint8_t d;
+    case segmentModeClock:
+      d = dateTime.getHour();
+      if (d > 9) digits[0] = ledsegments[d / 10];
+      digits[1] = ledsegments[d % 10] | (showSeparator > 0 ? 128 : 0);
+      
+      d = dateTime.getMinute();
+      digits[2] = ledsegments[d / 10];
+      digits[3] = ledsegments[d % 10];
+      break;
+    case segmentModeSeconds:
+      d = dateTime.getSecond();
+      digits[1] = (showSeparator > 0 ? 128 : 0);
+      digits[2] = ledsegments[d / 10];
+      digits[3] = ledsegments[d % 10];      
+      break;
+    case segmentModeCalendar:
+      d = dateTime.getDay();
+      if (d > 9) digits[0] = ledsegments[d / 10];
+      digits[1] = ledsegments[d % 10] | (showSeparator > 0 ? 128 : 0);
+      
+      d = dateTime.getMonth();
+      if (d > 9) digits[2] = ledsegments[d / 10];
+      digits[3] = ledsegments[d % 10];
+      break;
+      
+  }
   LedDriver.writeDigits(SAA1064::SUBADDRESS_DIGIT_1, digits, 4);
   
   // blink onboard led
   digitalWrite(ledPin, showSeparator > 0 ? HIGH : LOW);
 }
 
-void updateSecondLED() {
+/*void updateSecondLED() {
   // show seconds in binary form on additional led
   int seconds = dateTime.getSecond();
   for (int i = 5; i >= 0; i--) {
     digitalWrite(secondPins[i], seconds % 2 == 1);
     seconds /= 2;
   }
-}
+}*/
 
 void updateStrip() {
   Serial.print("updateString ... ");
