@@ -185,7 +185,8 @@ void loop() {
     if (showSeparator > 0) {
       printClock();
       //updateSecondLED();
-      updateStrip();
+      //updateStrip();
+      checkResetDCF();
     }
     if (backToClockModeCounter > 0) backToClockModeCounter--;
     periodicInterruptFlag = 0;
@@ -222,6 +223,15 @@ void loop() {
   }
   
   delay(50);
+}
+
+void checkResetDCF() {
+  if (dateTime.getHour() > 23 || (dateTime.getMinute() % 15 == 4 && dateTime.getSecond() == 58)) {
+    RTC_DCF.disableDCF77Reception();
+    LedDriver.writeDigits(SAA1064::SUBADDRESS_DIGIT_1, dcf, 4);
+    delay(2500);
+    RTC_DCF.enableDCF77Reception();
+  }
 }
 
 void periodicInterrupt(void)
@@ -379,7 +389,7 @@ void adjustBrightness() {
   // Ausgangsstrom dem SAA1064 übergeben
   FourDigitLedDisplay.setDisplayOutputCurrent(outputCurrent);
 
-  tone(SOUND_PIN, 244);
+  tone(SOUND_PIN, 244 + 12 * brightness);
   delay(20);
   noTone(SOUND_PIN);
   delay(180);
