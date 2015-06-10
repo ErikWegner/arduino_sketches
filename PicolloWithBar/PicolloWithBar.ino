@@ -140,6 +140,8 @@ void setup() {
   DIDR0  = 1 << ADC_CHANNEL; // Turn off digital input for ADC pin
   TIMSK0 = 0;                // Timer0 off
 
+  analogReference(EXTERNAL);
+
   sei(); // Enable interrupts
 }
 
