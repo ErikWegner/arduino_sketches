@@ -58,29 +58,6 @@ const unsigned int ADJUST_SAMPLE_COUNTER_THRESHOLD = 5;
 
 const unsigned int FFT_OUTPUT_BINS = FFT_N / 2;
 
-// Index into RELAY_PINS to control the light of the corresponding color.
-const int GREEN = 0;
-const int YELLOW = 1;
-const int RED = 2;
-
-// The digital IO pin numbers used by the relay board.
-const int RELAY_PINS[] = { 2, 7, 8 };
-
-// A flag indicating if blink modes should be enabled or represented as
-// a solid indicator.
-const bool BLINK_ENABLED = true;
-
-// The interval, in milliseconds, that the display level is evaluated for
-// a change that impacts the displayed state when in a blinking state
-// in the display is illuminated.
-const unsigned long BLINK_ILLUMINATED_LEVEL_UPDATE_INTERVAL = 750;
-
-// The interval, in milliseconds, that the display level is evaluated for
-// a change that impacts the displayed state when in a blinking state
-// and the display is not illuminated.
-const unsigned long BLINK_EXTINGUISHED_LEVEL_UPDATE_INTERVAL = 1000
-  - BLINK_ILLUMINATED_LEVEL_UPDATE_INTERVAL;
-
 // The OK display level.
 const byte OK_LEVEL = 0;
 // The INFO display level.
@@ -90,7 +67,7 @@ const byte WARN_LEVEL = 2;
 // The WARN PLUS display level.
 const byte WARN_PLUS_LEVEL = 3;
 // The STFU DAVE display level.
-const byte STFU_DAVE_LEVEL = 4;
+const byte EMERG_LEVEL = 4;
 
 const byte INPUT_SOURCE_LEVEL = 0;
 const byte INPUT_SOURCE_ADJUSTER = 1;
@@ -147,20 +124,20 @@ volatile unsigned int warnReleaseThreshold = DEFAULT_THRESHOLD;
 volatile unsigned int warnPlusThreshold = DEFAULT_THRESHOLD;
 volatile unsigned int warnPlusReleaseThreshold = DEFAULT_THRESHOLD;
 
-volatile unsigned int stfuDaveThreshold = DEFAULT_THRESHOLD;
-volatile unsigned int stfuDaveReleaseThreshold = DEFAULT_THRESHOLD;
+volatile unsigned int emergThreshold = DEFAULT_THRESHOLD;
+volatile unsigned int emergReleaseThreshold = DEFAULT_THRESHOLD;
+
+// Adafruit LED ring
+#include <Adafruit_NeoPixel.h>
+#define PIXEL_PIN 9 // Digital IO pin connected to the NeoPixels.
+#define PIXEL_COUNT 12
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(PIXEL_COUNT, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
+volatile byte rotoPos = 0;
 
 void setup() {
   
   // Initialize the serial port so we can have debug logging.
   Serial.begin(115200);
-
-  // Set the digital IO pins to output mode for the relay board control pins and
-  // make sure everything is dark.
-  for (int i = 0; i < 3; i++)  {
-    pinMode(RELAY_PINS[i], OUTPUT);
-    digitalWrite(RELAY_PINS[i], LOW);
-  }
   
   Serial.println(F(""));
   ApplicationMonitor.Dump(Serial);
@@ -169,6 +146,8 @@ void setup() {
   initAdc();
 
   cli();
+  strip.begin();
+  strip.show();
   Serial.println(F("############################ Initialized ############################"));
   sei();
 }
@@ -198,16 +177,16 @@ void loop() {
   int currentWarnPlusThreshold = warnPlusThreshold;
   int currentWarnPlusReleaseThreshold = warnPlusReleaseThreshold;
   
-  int currentStfuDaveThreshold = stfuDaveThreshold;
-  int currentStfuDaveReleaseThreshold = stfuDaveReleaseThreshold;
+  int currentErmergThreshold = emergThreshold;
+  int currentErmergReleaseThreshold = emergReleaseThreshold;
   sei();
 
-  if (currentSmoothedLevel > currentStfuDaveThreshold) {
-    newDisplayLevel = STFU_DAVE_LEVEL;
+  if (currentSmoothedLevel > currentErmergThreshold) {
+    newDisplayLevel = EMERG_LEVEL;
   } else if (currentSmoothedLevel > currentWarnPlusThreshold) {
     // Add a little historesis.
     if (displayLevel < WARN_PLUS_LEVEL
-        || (displayLevel > WARN_PLUS_LEVEL && currentSmoothedLevel < currentStfuDaveReleaseThreshold)) {
+        || (displayLevel > WARN_PLUS_LEVEL && currentSmoothedLevel < currentErmergReleaseThreshold)) {
       newDisplayLevel = WARN_PLUS_LEVEL;
     }
   } else if (currentSmoothedLevel > currentWarnThreshold) {
@@ -253,34 +232,27 @@ void loop() {
     switch (displayLevel) {
       default:
       case OK_LEVEL:
-        turnOtherLightsOff(GREEN);
-        turnLightOn(GREEN);
+        showGreen();
         break;
       case INFO_LEVEL:
-        turnOtherLightsOff(YELLOW);
-        if (BLINK_ENABLED) {
-          displayLevelUpdateInterval = toggleLight(YELLOW);
-        } else {
-          turnLightOn(YELLOW);
-        }
+        showRoto(0x00, 0x20, 0x00);
+        displayLevelUpdateInterval = 333;
         break;
       case WARN_LEVEL:
-        turnOtherLightsOff(YELLOW);
-        turnLightOn(YELLOW);
+        showRoto(0x28, 0x20, 0x00);
+        displayLevelUpdateInterval = 250;
         break;
       case WARN_PLUS_LEVEL:
-        turnOtherLightsOff(RED);
-        if (BLINK_ENABLED) {
-          displayLevelUpdateInterval = toggleLight(RED);
-        } else {
-          turnLightOn(RED);
-        }
+        showRoto(0x40, 0x00, 0x00);
+        displayLevelUpdateInterval = 150;
         break;
-      case STFU_DAVE_LEVEL:
-        turnOtherLightsOff(RED);
-        turnLightOn(RED);
+      case EMERG_LEVEL:
+        showBlinkRed();
+        displayLevelUpdateInterval = 200;
         break;
     }
+    
+    rotoPos = (rotoPos + 1) % PIXEL_COUNT;
     
     cli();
     Serial.print(F("Next display update in: "));
@@ -290,6 +262,36 @@ void loop() {
     Serial.println(currentSmoothedLevel);
     sei();
   }
+}
+
+void showRoto(byte r, byte g, byte b) {
+  strip.clear();
+  int i;
+  for(i=0; i < PIXEL_COUNT; i+=3) {
+    strip.setPixelColor((rotoPos + i) % PIXEL_COUNT, r, g, b);
+  }
+  strip.show();
+}
+
+void showBlinkRed() {
+  strip.clear();
+  if (rotoPos % 2 == 0) {
+    // set all pixels to red
+    int i;
+    for(i=0; i < PIXEL_COUNT; i++) {
+      strip.setPixelColor(i, 128, 0, 0);
+    }
+  }
+  strip.show();
+}
+
+void showGreen() {
+  // set all pixels to a dark green
+  int i;
+  for(i=0; i < PIXEL_COUNT; i++) {
+    strip.setPixelColor(i, 0, 8, 0);
+  }
+  strip.show();
 }
 
 /**
@@ -343,8 +345,8 @@ ISR(ADC_vect) {
           warnPlusThreshold = warnThreshold + THRESHOLD_DELTA;
           warnPlusReleaseThreshold = warnPlusThreshold - THRESHOLD_RELEASE_DELTA;
 
-          stfuDaveThreshold = warnPlusThreshold + THRESHOLD_DELTA;
-          stfuDaveReleaseThreshold = stfuDaveThreshold - THRESHOLD_RELEASE_DELTA;
+          emergThreshold = warnPlusThreshold + THRESHOLD_DELTA;
+          emergReleaseThreshold = emergThreshold - THRESHOLD_RELEASE_DELTA;
 
           // Bring the smoothed average up to baseline quickly.
           if (smoothedLevel == 0.0) {
@@ -441,32 +443,6 @@ ISR(ADC_vect) {
       ignoreConversion = false;
       sampleCounter = 0;
     }
-  }
-}
-
-void turnLightOn(byte light) {
-  digitalWrite(RELAY_PINS[light], HIGH);
-}
-
-void turnLightOff(byte light) {
-  digitalWrite(RELAY_PINS[light], LOW);
-}
-
-void turnOtherLightsOff(byte light) {
-  for (int i = 0; i < 3; i++)  {
-    if (i != light) {
-      digitalWrite(RELAY_PINS[i], LOW);
-    }
-  }
-}
-
-unsigned long toggleLight(byte light) {
-  if (digitalRead(RELAY_PINS[light])) {
-    digitalWrite(RELAY_PINS[light], 0);
-    return BLINK_EXTINGUISHED_LEVEL_UPDATE_INTERVAL;
-  } else {
-    digitalWrite(RELAY_PINS[light], 1);
-    return BLINK_ILLUMINATED_LEVEL_UPDATE_INTERVAL;
   }
 }
 
