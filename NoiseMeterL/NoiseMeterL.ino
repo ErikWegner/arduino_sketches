@@ -131,12 +131,33 @@ volatile unsigned int emergReleaseThreshold = DEFAULT_THRESHOLD;
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(PIXEL_COUNT, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 volatile byte rotoPos = 0;
 
+// 4DLED
+#include "Wire.h"
+#include "I2C_4DLED.h"
+const uint8_t i2cAddressSAA1064 = 0x70;
+
+
 void setup() {
   
   // Initialize the serial port so we can have debug logging.
   Serial.begin(115200);
   
   Serial.println(F(""));
+
+  Wire.begin();
+
+  // 4-Digit-LED-Anzeige mit I2C-Adresse des SAA1064 initialisieren
+  FourDigitLedDisplay.begin(i2cAddressSAA1064);
+  
+  // alle im SAA1064 gespeicherten Digits löschen
+  FourDigitLedDisplay.clearDisplay();
+  
+  // Segmenttest des Displays starten
+  FourDigitLedDisplay.testDisplaySegments(1);
+  
+  // nach einer Sekunde den Segmenttest beenden
+  delay(1000);
+  FourDigitLedDisplay.testDisplaySegments(0);
 
   initAdc();
 
@@ -209,7 +230,9 @@ void loop() {
     cli();
     Serial.print(F("Chose new display level: "));
     Serial.println(displayLevel);
+    //Serial.println(led4d);
     sei();
+
   }
 
   // Drive the display as needed /////////////////////////////////
@@ -245,6 +268,9 @@ void loop() {
     }
     
     rotoPos = (rotoPos + 1) % PIXEL_COUNT;
+
+    int16_t led4d = currentSmoothedLevel;
+    FourDigitLedDisplay.writeDecimal(led4d);
     
     cli();
     Serial.print(F("Next display update in: "));
