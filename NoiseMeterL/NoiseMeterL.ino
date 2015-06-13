@@ -36,9 +36,6 @@
 #define FFT_N 256
 
 #include <FFT.h>
-#include <ApplicationMonitor.h>
-
-Watchdog::CApplicationMonitor ApplicationMonitor;
 
 // Application Constants /////////////////////////////
 
@@ -140,8 +137,6 @@ void setup() {
   Serial.begin(115200);
   
   Serial.println(F(""));
-  ApplicationMonitor.Dump(Serial);
-  ApplicationMonitor.EnableWatchdog(Watchdog::CApplicationMonitor::Timeout_120ms);
 
   initAdc();
 
@@ -154,9 +149,6 @@ void setup() {
 
 void loop() {
   unsigned long currentMillis = millis();
-  
-  ApplicationMonitor.IAmAlive();
-  ApplicationMonitor.SetData(currentMillis);
   
   // Calculate the new display state //////////////////////////
 
