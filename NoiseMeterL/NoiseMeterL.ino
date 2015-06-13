@@ -136,6 +136,9 @@ volatile byte rotoPos = 0;
 #include "I2C_4DLED.h"
 const uint8_t i2cAddressSAA1064 = 0x70;
 
+#define TONE_PIN 11
+#define NUM_TONES 3
+byte tones = NUM_TONES;
 
 void setup() {
   
@@ -243,7 +246,11 @@ void loop() {
     
     // Perhaps no need to check again until the display level changes.
     displayLevelUpdateInterval = UNSIGNED_LONG_MAX;
-
+    
+    if (displayLevel != EMERG_LEVEL) {
+      tones = NUM_TONES;
+    }
+    
     switch (displayLevel) {
       default:
       case OK_LEVEL:
@@ -273,11 +280,11 @@ void loop() {
     FourDigitLedDisplay.writeDecimal(led4d);
     
     cli();
-    Serial.print(F("Next display update in: "));
+/*    Serial.print(F("Next display update in: "));
     Serial.println(displayLevelUpdateInterval);
     
     Serial.print(F("Current level: "));
-    Serial.println(currentSmoothedLevel);
+    Serial.println(currentSmoothedLevel);*/
     sei();
   }
 }
@@ -299,6 +306,12 @@ void showBlinkRed() {
     for(i=0; i < PIXEL_COUNT; i++) {
       strip.setPixelColor(i, 128, 0, 0);
     }
+    if (tones > 0) {
+      tone(TONE_PIN, 660);
+      tones--;
+    }
+  } else {
+    noTone(TONE_PIN);
   }
   strip.show();
 }
