@@ -154,7 +154,7 @@ void setup() {
   
   // alle im SAA1064 gespeicherten Digits löschen
   FourDigitLedDisplay.clearDisplay();
-  
+  FourDigitLedDisplay.setDisplayOutputCurrent(I2C_4DLED::OUTPUT_CURRENT_3_MA);
   // Segmenttest des Displays starten
   FourDigitLedDisplay.testDisplaySegments(1);
   
