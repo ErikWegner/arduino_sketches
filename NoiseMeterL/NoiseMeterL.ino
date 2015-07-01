@@ -276,8 +276,8 @@ void loop() {
     
     rotoPos = (rotoPos + 1) % PIXEL_COUNT;
 
-    int16_t led4d = currentSmoothedLevel;
-    FourDigitLedDisplay.writeDecimal(led4d);
+    int16_t led4d = currentSmoothedLevel - 2500;
+    FourDigitLedDisplay.writeDecimal(max(0, led4d));
     
     cli();
 /*    Serial.print(F("Next display update in: "));
