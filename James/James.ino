@@ -46,10 +46,12 @@ e8_bmp[] =
 };
 
 byte paddlePosition = 0;
+byte opponentPaddlePosition = 0;
 #define paddlePin 0
 
 unsigned int   ballTime = 0, ballStartX = 8, ballStartY = 4;
 byte
+gameTicks = 0,
 ballSpeed = 1,
 ballDirection = 100,
 ballX = 0,
@@ -87,11 +89,13 @@ void setup() {
 
   intro();
   randomSeed(analogRead(2));
+  ballDirection = random(88, 168);
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
   tennis();
+  gameTicks = (gameTicks + 1) % 25;
 }
 
 void intro() {
@@ -136,6 +140,7 @@ void tennis() {
   matrix.clear();
   paddlePosition = map(analogRead(paddlePin), 80, 940, 0, 6);
   moveBall();
+  moveOpponentPaddle();
   checkPaddle();
   checkBall();
   //printDebug();
@@ -145,27 +150,59 @@ void tennis() {
 
   // paint paddle
   matrix.drawLine(0, paddlePosition, 0, paddlePosition + 1, LED_YELLOW);
+  matrix.drawLine(7, opponentPaddlePosition, 7, opponentPaddlePosition + 1, LED_RED);
   matrix.writeDisplay();
 }
 
+void moveOpponentPaddle() {
+  if (gameTicks % 8 == 0) {
+    if (opponentPaddlePosition < ballY - 1) opponentPaddlePosition++;
+    if (opponentPaddlePosition > ballY - 1) opponentPaddlePosition--;
+    opponentPaddlePosition = constrain(opponentPaddlePosition, 0, 6);
+  }
+}
+
 void checkPaddle() {
-  if (ballX < 2) { // 1 or 0: ball is at left border (or outside)
-    Serial.println("check");
+  if (ballX < 1) {
+    Serial.println("player lost");
+    // user has lost, ball is outside the game field
+    ballX = ballStartX = 7;
+    ballY = ballStartY = opponentPaddlePosition;
+    ballTime = 0;
+    ballDirection = random(88, 168);
+    ballSpeed = 1;
+  } else if (ballX < 2) { // 1 or 0: ball is at left border (or outside)
+    Serial.println("check player");
     // check if paddle has ball contact
     if (ballY - 1 == paddlePosition || ballY - 2 == paddlePosition) {
-      Serial.println("reflect");
+      Serial.println("reflect player");
       // reflect the ball
       ballX = ballStartX = 2;
       ballStartY = constrain(ballY, 1, 8);
       ballTime = 0;
       ballDirection = 128 - ballDirection + random(17) - 8;
-    } else if (ballX < 1) {
-      Serial.println("lost");
-      // user has lost, ball is outside the game field
-      ballX = ballStartX = 8;
-      ballY = ballStartY = 4;
+      ballSpeed = min(ballSpeed + 1, 4);
+    }
+  }
+
+  if (ballX > 8) {
+    Serial.println("arduino lost");
+    // arduino has lost, ball is outside the game field
+    ballX = ballStartX = 2;
+    ballY = ballStartY = paddlePosition;
+    ballTime = 0;
+    ballDirection = 172 + random(168);
+    ballSpeed = 1;
+  } else if (ballX > 7) { // 8 or 9: ball is at right border (or outside)
+    Serial.println("check arduino");
+    // check if paddle has ball contact
+    if (ballY - 1 == opponentPaddlePosition || ballY - 2 == opponentPaddlePosition)  {
+      Serial.println("reflect opponent");
+      // reflect the ball
+      ballX = ballStartX = 7;
+      ballStartY = constrain(ballY, 1, 8);
       ballTime = 0;
-      ballDirection = random(88, 168);
+      ballDirection = 128 - ballDirection + random(17) - 8;
     }
   }
 }
@@ -181,9 +218,9 @@ void printDebug() {
 }
 
 void moveBall() {
-  ballTime += ballSpeed;
-  ballX = ballStartX + (ballTime * cos(ballDirection * 3.14 / 128.0)) / 10.0;
-  ballY = ballStartY + (ballTime * sin(ballDirection * 3.14 / 128.0)) / 10.0;
+  ballTime += 1;
+  ballX = ballStartX + (ballTime * ballSpeed / 3.0 * cos(ballDirection * 3.14 / 128.0)) / 10.0;
+  ballY = ballStartY + (ballTime * ballSpeed / 3.0 * sin(ballDirection * 3.14 / 128.0)) / 10.0;
   delay(25);
 }
 
@@ -219,7 +256,7 @@ void checkBall() {
     ballDirection = 256 - ballDirection + random(7) - 3;
   }
 
-  if (ballX < 1) {
+/*  if (ballX < 1) {
     // left border (paddle side)
     ballX = ballStartX = 1;
     ballStartY = constrain(ballY, 1, 8);
@@ -232,6 +269,6 @@ void checkBall() {
     ballStartY = constrain(ballY, 1, 8);
     ballTime = 0;
     ballDirection = 128 - ballDirection + random(7) - 3;
-  }
+  }*/
 }
 
