@@ -136,8 +136,10 @@ void tennis() {
   matrix.clear();
   paddlePosition = map(analogRead(paddlePin), 80, 940, 0, 6);
   moveBall();
+  checkPaddle();
   checkBall();
-  
+  //printDebug();
+
   // paint ball
   matrix.drawPixel(ballX - 1, ballY - 1, LED_GREEN);
 
@@ -146,11 +148,29 @@ void tennis() {
   matrix.writeDisplay();
 }
 
-void moveBall() {
-  ballTime += ballSpeed;
-  ballX = ballStartX + (ballTime * cos(ballDirection * 3.14 / 128.0)) / 10.0;
-  ballY = ballStartY + (ballTime * sin(ballDirection * 3.14 / 128.0)) / 10.0;
-  delay(50);
+void checkPaddle() {
+  if (ballX < 2) { // 1 or 0: ball is at left border (or outside)
+    Serial.println("check");
+    // check if paddle has ball contact
+    if (ballY - 1 == paddlePosition || ballY - 2 == paddlePosition) {
+      Serial.println("reflect");
+      // reflect the ball
+      ballX = ballStartX = 2;
+      ballStartY = constrain(ballY, 1, 8);
+      ballTime = 0;
+      ballDirection = 128 - ballDirection + random(17) - 8;
+    } else if (ballX < 1) {
+      Serial.println("lost");
+      // user has lost, ball is outside the game field
+      ballX = ballStartX = 8;
+      ballY = ballStartY = 4;
+      ballTime = 0;
+      ballDirection = random(88, 168);
+    }
+  }
+}
+
+void printDebug() {
   Serial.print(F("X: "));
   Serial.print(ballX);
   Serial.print(F(" Y: "));
@@ -158,6 +178,13 @@ void moveBall() {
   Serial.print(F(" D: "));
   Serial.print(ballDirection);
   Serial.println(F(""));
+}
+
+void moveBall() {
+  ballTime += ballSpeed;
+  ballX = ballStartX + (ballTime * cos(ballDirection * 3.14 / 128.0)) / 10.0;
+  ballY = ballStartY + (ballTime * sin(ballDirection * 3.14 / 128.0)) / 10.0;
+  delay(25);
 }
 
 void checkBall() {
@@ -182,14 +209,14 @@ void checkBall() {
     ballStartX = constrain(ballX, 1, 8);
     ballY = ballStartY = 1;
     ballTime = 0;
-    ballDirection = 256 - ballDirection;
+    ballDirection = 256 - ballDirection + random(7) - 3;
   }
   if (ballY > 8) {
     // bottom border
     ballStartX = constrain(ballX, 1, 8);
     ballY = ballStartY = 8;
     ballTime = 0;
-    ballDirection = 256 - ballDirection;
+    ballDirection = 256 - ballDirection + random(7) - 3;
   }
 
   if (ballX < 1) {
@@ -197,14 +224,14 @@ void checkBall() {
     ballX = ballStartX = 1;
     ballStartY = constrain(ballY, 1, 8);
     ballTime = 0;
-    ballDirection = 128 - ballDirection;
+    ballDirection = 128 - ballDirection + random(7) - 3;
   }
 
   if (ballX > 8) {
     ballX = ballStartX = 8;
     ballStartY = constrain(ballY, 1, 8);
     ballTime = 0;
-    ballDirection = 128 - ballDirection;
+    ballDirection = 128 - ballDirection + random(7) - 3;
   }
 }
 
