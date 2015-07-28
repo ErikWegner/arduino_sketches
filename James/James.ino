@@ -57,6 +57,10 @@ ballDirection = 100,
 ballX = 0,
 ballY = 0;
 
+#define BUFFERSIZE 80
+char buffer[BUFFERSIZE+1];
+String parserString;
+
 #include <stdarg.h>
 void p(char *fmt, ... ) {
   char buf[128]; // resulting string limited to 128 chars
@@ -80,7 +84,6 @@ void setup() {
   lcdserial.write(254); // move cursor to beginning of first line
   lcdserial.write(128);
 
-  Serial.println(F("Ready"));
   // put your setup code here, to run once:
   matrix.begin(0x70);  // pass in the address
 
@@ -90,12 +93,61 @@ void setup() {
   intro();
   randomSeed(analogRead(2));
   ballDirection = random(88, 168);
+
+  Serial.println(F("Ready"));
+  Serial.println(F("Waiting for commands. Terminate with ';'."));
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  tennis();
+  //tennis();
+  processSerial();
   gameTicks = (gameTicks + 1) % 25;
+}
+
+void processSerial() {
+  if (Serial.available()) {
+    byte len = Serial.readBytesUntil(';', buffer, BUFFERSIZE);
+    if (len > 0) {
+      buffer[len] = '\0';
+      parserString = String(buffer);
+      if (parserString.startsWith("M")) {
+        processMatrix(parserString.substring(1));
+      }
+    }
+  } 
+  else {
+    delay(2);
+  }
+}
+
+void processMatrix(String s) {
+  if (s.equalsIgnoreCase(F("CLEAR"))) {
+    matrix.clear();
+    matrix.writeDisplay();
+    return;
+  }
+
+  if (s.equalsIgnoreCase(F("SHOW"))) {
+    matrix.writeDisplay();
+  }
+
+/*  if (s.startsWith(F("ROT"))) {
+    matrix.setRotation(s.substring(3,4).toInt());
+    Serial.print(s.substring(3,4));
+  }*/
+
+  if (s.substring(0, 4).equalsIgnoreCase(F("DATA"))) {
+    byte lastSep = 4, nextSep, line = 0;
+    while (line < 8) {
+      nextSep = s.indexOf(",", lastSep);
+      if (nextSep == -1) nextSep = s.length();
+      matrix.displaybuffer[line] = s.substring(lastSep, nextSep).toInt();
+      lastSep = nextSep + 1;
+      line++;
+    }
+    matrix.writeDisplay();
+  }
 }
 
 void intro() {
