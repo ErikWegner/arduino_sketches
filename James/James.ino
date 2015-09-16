@@ -30,7 +30,7 @@ class mySerial : public SoftwareSerial {
 
 byte brightness = 7; //Brightness goes from 0-7
 
-mySerial lcdserial(LCD_PORT_RX, LCD_PORT_TX);
+//mySerial lcdserial(LCD_PORT_RX, LCD_PORT_TX);
 
 static const uint8_t PROGMEM
 e8_bmp[] =
@@ -73,7 +73,7 @@ void p(char *fmt, ... ) {
 void setup() {
   Serial.begin(115200);
 
-  lcdserial.begin(9600);
+/*  lcdserial.begin(9600);
   lcdserial.write(254); // move cursor to beginning of first line
   lcdserial.write(128);
 
@@ -82,7 +82,7 @@ void setup() {
 
   lcdserial.write(254); // move cursor to beginning of first line
   lcdserial.write(128);
-
+*/
   LedSign::Init(SINGLE_BUFFER);  //Initializes the screen
 
   //intro();
