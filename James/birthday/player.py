@@ -27,7 +27,7 @@ greenlength = greenimg.size[0] - maxtrixwidth
 looplength = max(redlength, greenlength)
 
 # loop
-def loop(position, image = 3):
+def loop(position, image = 3, rotation = 3):
     redposition = redlength * position / looplength
     greenposition = greenlength * position / looplength
     lines = array.array('H', [0, 0, 0, 0, 0, 0, 0, 0])
@@ -36,15 +36,29 @@ def loop(position, image = 3):
             redHigh = redtext[redposition + x, y]
             greenHigh = greentext[greenposition + x, y]
             color = (greenHigh * 2 + redHigh) & image
+
+            if rotation == 0:
+                ax = x
+                ay = y
+            elif rotation == 1:
+                (ay,ax) = x, y
+                ax = 8 - ax - 1
+            elif rotation == 2:
+                ax = 8 - x - 1;
+                ay = 8 - y - 1;
+            elif rotation == 3:
+                (ay,ax) = x, y
+                ay = 8 - ay - 1;
+
             # Turn on green LED.
             if (color == 2):
-                lines[y] |= 1 << x; lines[y] &= ~(1 << (x+8));
+                lines[ay] |= 1 << ax; lines[ay] &= ~(1 << (ax+8));
             # Turn on red LED.
             if (color == 1):
-                lines[y] |= 1 << (x+8);lines[y] &= ~(1 << x);
+                lines[ay] |= 1 << (ax+8);lines[ay] &= ~(1 << ax);
             # Turn on green and red LED.
             if (color == 3):
-                lines[y] |= (1 << (x+8)) | (1 << x);
+                lines[ay] |= (1 << (ax+8)) | (1 << ax);
     data = "MDATA" + ','.join([str(line) for line in lines]) + ";"
     ser.write(data.encode('ascii'))
     ser.flush()
@@ -55,4 +69,6 @@ while(True):
         for position in range(0, looplength):
             loop(position, image)
             time.sleep(waiting)
-            
+    for position in reversed(range(0, looplength)):
+        loop(position)
+        time.sleep(waiting / 1.5)
