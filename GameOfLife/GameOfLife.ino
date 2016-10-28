@@ -6,21 +6,27 @@ Adafruit_BicolorMatrix matrix = Adafruit_BicolorMatrix();
 
 #define BREITE 8
 #define HOEHE  8
+#define WAYBACK 3
 
 unsigned char lines[HOEHE];
+unsigned char linesold[3][HOEHE];
+unsigned char linesoldindex = 0;
 unsigned char color = 0;
+
 
 void setup() {
   matrix.begin(0x70);
   matrix.clear();
   matrix.setRotation(3);
+  randomSeed(analogRead(0));
   randomLines();
+  prepareOldLines();
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
   updateDisplay();
-  if (updateLines() == 0) {
+  updateOldlines();
+  if (updateLines() == 0 || checkOldlines() == 0) {
     color = (color + 1) % 3;
     randomLines();
     delay(1000);
@@ -100,24 +106,48 @@ unsigned char updateLines() {
   return hasUpdate;
 }
 
-char checkLines() {
+/* Check if any old state equals current state. Return 1 if no match is found */
+char checkOldlines() {
+  unsigned char line, oldie, match;
+  for (oldie = 0; oldie < WAYBACK; oldie++) {
+    match = 0;
+    for (line = 0; line < HOEHE; line++) {
+      if (lines[line] == linesold[oldie][line]) {
+        match++;
+      }
+    }
+    if (match == HOEHE) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
+/* Copy current lines into array of old lines at linesoldindex-position */
+void updateOldlines() {
   unsigned char line;
   for (line = 0; line < HOEHE; line++) {
-    if (lines[line] > 0) return 1;
+    linesold[linesoldindex][line] = lines[line];
   }
-
-  return 0;
+  linesoldindex = (linesoldindex + 1) % WAYBACK;
 }
 
 void randomLines() {
-  randomSeed(analogRead(0));
-
   unsigned char line;
   for (line = 0; line < HOEHE; line++) {
     lines[line] = random(256);
   }
 }
 
+void prepareOldLines() {
+  unsigned char line;
+  for (linesoldindex = 0; linesoldindex < WAYBACK; linesoldindex++) {
+    for (line = 0; line < HOEHE; line++) {
+      linesold[linesoldindex][line] = 0;
+    }
+  }
+  linesoldindex = 0;
+}
 
 void updateDisplay() {
   unsigned char line;
