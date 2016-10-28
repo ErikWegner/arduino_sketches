@@ -8,6 +8,7 @@ Adafruit_BicolorMatrix matrix = Adafruit_BicolorMatrix();
 #define HOEHE  8
 
 unsigned char lines[HOEHE];
+unsigned char color = 0;
 
 void setup() {
   matrix.begin(0x70);
@@ -19,8 +20,12 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
   updateDisplay();
-  updateLines();
-  delay(500);
+  if (updateLines() == 0) {
+    color = (color + 1) % 3;
+    randomLines();
+    delay(1000);
+  }
+  delay(333);
 }
 
 
@@ -116,8 +121,10 @@ void randomLines() {
 
 void updateDisplay() {
   unsigned char line;
+  unsigned int red = (color > 0) ? 256 : 0;
+  unsigned int green = (color != 1) ? 1: 0;
   for (line = 0; line < HOEHE; line++) {
-    matrix.displaybuffer[line] = lines[line];
+    matrix.displaybuffer[line] = lines[line] * green + lines[line] * red;
   }
   matrix.writeDisplay();
 }
