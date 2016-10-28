@@ -12,9 +12,13 @@ unsigned char lines[HOEHE];
 unsigned char linesold[3][HOEHE];
 unsigned char linesoldindex = 0;
 unsigned char color = 0;
-
+unsigned char tasterPin = 7;
+unsigned char tasterClosed = 0;
 
 void setup() {
+  Serial.begin(9600); 
+  pinMode(tasterPin, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(tasterPin), buttonPressed, CHANGE);
   matrix.begin(0x70);
   matrix.clear();
   matrix.setRotation(3);
@@ -24,6 +28,11 @@ void setup() {
 }
 
 void loop() {
+  if (tasterClosed != 0) {
+    randomLines();
+    tasterClosed = 0;
+    color = (color + 1) % 3;
+  }
   updateDisplay();
   updateOldlines();
   if (updateLines() == 0 || checkOldlines() == 0) {
@@ -159,4 +168,8 @@ void updateDisplay() {
   matrix.writeDisplay();
 }
 
+void buttonPressed() {
+  tasterClosed = 1;
+  Serial.println(F("Interrupt"));
+}
 
