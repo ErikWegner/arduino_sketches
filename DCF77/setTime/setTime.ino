@@ -1,3 +1,4 @@
+
 /******************************************************************************
 Beispiel:      setTime
 
@@ -21,13 +22,13 @@ Hinweis:       Zur Einstellung des Kommunikationswegs (UART, SPI oder I2C) zum
    werden. */
 
 /* für die Kommunikation über UART die modSoftwareSerial.h verwenden */
-//#include "modSoftwareSerial.h"
+#include "modSoftwareSerial.h"
 
 /* für die Kommunikation über SPI die SPI.h verwenden */
-//#include "SPI.h"
+//#include <SPI.h>
 
 /* für die Kommunikation über Wire die Wire.h verwenden */
-#include "Wire.h"
+//#include <Wire.h>
 
 /******************************************************************************
 globale Variablen
@@ -40,10 +41,7 @@ Funktionen
 ******************************************************************************/
 void setup()
 {
-  /* die serielle Ausgabe initialisieren */
-  Serial.begin(115200);  
-
-  Serial.println("der RTC-DCF benötigt ca. 1,5 Sekunden bis er Daten empfangen kann");
+  /* der RTC-DCF benötigt ca. 1,5 Sekunden bis er Daten empfangen kann */
   delay(1500); 
   
   /* RTC-DCF initialisieren */  
@@ -52,6 +50,11 @@ void setup()
   /* Uhrzeit im RTC-DCF setzen */
   RTC_DCF.setDateTime(&dateTime);
 
+  /* die serielle Ausgabe initialisieren */
+  Serial.begin(115200);
+
+  RTC_DCF.enableDCF77Reception();
+  RTC_DCF.enableDCF77LED();
 }
 
 void loop()

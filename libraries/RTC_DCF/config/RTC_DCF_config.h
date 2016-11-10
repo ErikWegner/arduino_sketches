@@ -16,7 +16,7 @@ Definitionen
 
                     Ox02  I2C */
 
-#define RTC_DCF_COMMUNICATION     0x02
+#define RTC_DCF_COMMUNICATION     0x00
 
 
 
@@ -28,7 +28,7 @@ Definitionen
 
 /* eingestellte Baudrate des RTC-DCF (wird nur bei UART-Kommunikation benötigt) */
 
-#define RTC_DCF_UART_BAUDRATE     4800
+#define RTC_DCF_UART_BAUDRATE     9600
 
 
 

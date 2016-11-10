@@ -16,7 +16,6 @@ unsigned char tasterPin = 7;
 unsigned char tasterClosed = 0;
 
 void setup() {
-  Serial.begin(9600); 
   pinMode(tasterPin, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(tasterPin), buttonPressed, CHANGE);
   matrix.begin(0x70);
@@ -40,7 +39,7 @@ void loop() {
     randomLines();
     delay(1000);
   }
-  delay(333);
+  delay(200);
 }
 
 
@@ -83,7 +82,7 @@ unsigned char countNeighbours(unsigned char line, unsigned char column) {
   if (line < HOEHE - 1 && column < BREITE - 1) {
     neighbours += bitRead(lines[line + 1], column + 1);
   }
-  
+
   return neighbours;
 }
 
@@ -98,11 +97,11 @@ unsigned char updateLines() {
     for (column = 0; column < BREITE; column++) {
       neighbours = countNeighbours(line, column);
       deadOrAlive = bitRead(lines[line], column);
-      bitWrite(newlines[line], column, 
-        // dead cell with 3 neighbours gets born
-        (deadOrAlive == 0 && neighbours == 3) ||
-        // living cell with 2 or 3 neighbours lives on
-        (deadOrAlive == 1 && neighbours > 1 && neighbours < 4));
+      bitWrite(newlines[line], column,
+               // dead cell with 3 neighbours gets born
+               (deadOrAlive == 0 && neighbours == 3) ||
+               // living cell with 2 or 3 neighbours lives on
+               (deadOrAlive == 1 && neighbours > 1 && neighbours < 4));
     }
   }
   for (line = 0; line < HOEHE; line++) {
@@ -111,7 +110,7 @@ unsigned char updateLines() {
       hasUpdate = 1;
     }
   }
-  
+
   return hasUpdate;
 }
 
@@ -161,7 +160,7 @@ void prepareOldLines() {
 void updateDisplay() {
   unsigned char line;
   unsigned int red = (color > 0) ? 256 : 0;
-  unsigned int green = (color != 1) ? 1: 0;
+  unsigned int green = (color != 1) ? 1 : 0;
   for (line = 0; line < HOEHE; line++) {
     matrix.displaybuffer[line] = lines[line] * green + lines[line] * red;
   }
@@ -170,6 +169,5 @@ void updateDisplay() {
 
 void buttonPressed() {
   tasterClosed = 1;
-  Serial.println(F("Interrupt"));
 }
 
