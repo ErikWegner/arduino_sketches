@@ -35,13 +35,13 @@ Hinweis:       Zur Einstellung des Kommunikationswegs (UART, SPI oder I2C) zum
    werden. */
 
 /* für die Kommunikation über UART die modSoftwareSerial.h verwenden */
-//#include "modSoftwareSerial.h"
+#include "modSoftwareSerial.h"
 
 /* für die Kommunikation über SPI die SPI.h verwenden */
 //#include "SPI.h"
 
 /* für die Kommunikation über Wire die Wire.h verwenden */
-#include "Wire.h"
+//#include "Wire.h"
 
 /******************************************************************************
 Definitionen
@@ -81,13 +81,16 @@ void setup()
   RTC_DCF.begin();
 
   /* den periodischen Interrupt auf 1 Hz einstellen */
-  RTC_DCF.setPeriodicInterruptMode(RTC_PERIODIC_INT_PULSE_2_HZ);
+  RTC_DCF.setPeriodicInterruptMode(RTC_PERIODIC_INT_PULSE_1_HZ);
   
   /* den periodischen Interrupt des RTC-DCF aktivieren */
   RTC_DCF.enablePeriodicInterrupt();
   
   /* die serielle Ausgabe initialisieren */
   Serial.begin(115200);
+
+  RTC_DCF.enableDCF77Reception();
+  RTC_DCF.enableDCF77LED();
 
   Serial.println("Go");
 
