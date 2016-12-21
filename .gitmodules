@@ -1,0 +1,3 @@
+[submodule "libraries/RGB_matrix_Panel"]
+	path = libraries/RGB_matrix_Panel
+	url = https://github.com/ErikWegner/RGB-matrix-Panel.git
