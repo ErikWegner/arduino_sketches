@@ -1,182 +1,85 @@
-  /*
-* Further modified by Ben Leduc-Mills, standing on the shoulders of those mentioned below.
-*
-* Modified by Markus Lipp adding interleaved buffers, streaming, 32x32 & 24bit support
-*
-* Based on "_16x32_Matrix R3.0" by Creater Alex Medeiros, http://PenguinTech.tk
-* Use code freely and distort its contents as much as you want, just remeber to thank the
-* original creaters of the code by leaving their information in the header. :)
-*/
+#include <Adafruit_GFX.h>   // Core graphics library
+#include <RGBmatrixPanel.h> // Hardware-specific library
 
-//Define pins
-const uint8_t
+#define DEBUG_off 1
 
-//PortC
-APIN      = 15, BPIN      = 22, CPIN      = 23, DPIN = 9,
-CLOCKPIN  = 10, LATCHPIN  = 13, OEPIN     = 11,
-
-//PortD
-R1PIN     = 2, R2PIN     = 8,
-G1PIN     = 14, G2PIN     = 6,
-B1PIN     = 7, B2PIN     = 20;
-
-uint8_t pinTable[13] =
-{
-    R1PIN, R2PIN, G1PIN, G2PIN, B1PIN, B2PIN,
-    APIN, BPIN, CPIN, DPIN, CLOCKPIN, LATCHPIN, OEPIN
-};
-
-//Addresses 1/8 rows Through a decoder
-uint16_t const A = 1, B = 2, C = 4, D = 8;
-
-//Acts like a 16 bit shift register
-uint16_t const SCLK   = 16;
-uint16_t const LATCH  = 32;
-uint16_t const OE     = 64;
-
-//Decoder counter var
-uint16_t const abcVar[16] =
-{
-    0, A, B, A + B, C, C + A, C + B, A + B + C,
-    0 + D, A + D, B + D, A + B + D, C + D, C + A + D, C + B + D, A + B + C + D
-};
-
-//Data Lines for row 1 red and row 9 red, ect.
-uint16_t const RED1   = 1, RED2   = 8;
-uint16_t const GREEN1 = 2, GREEN2 = 16;
-uint16_t const BLUE1  = 4, BLUE2  = 32;
-
-const uint8_t SIZEX = 32;
-const uint8_t SIZEY = 32;
-
-//Here is where the data is all read
-uint8_t interleavedBuffer[SIZEX*SIZEY * 4];
-
-//BAM and interrupt variables
-boolean actDisplay = false;
-uint8_t rowN = 0;
-uint16_t BAM;
-uint8_t BAMMAX = 7; //now 24bit color! (0-7)
-
+RGBmatrixPanel matrix(true, 64);
+#define BUFFERSIZE (8 + 64*32*3/4) // width * height * 3  bytes per pixel / 4 colors per byte + command
+char buffer[BUFFERSIZE + 1];
+String parserString;
 
 void setup()
 {
-    for(uint8_t i = 0; i < 13; i++)
-    {
-        pinMode(pinTable[i], OUTPUT);
-    }
-    timerInit();
-    Serial.begin(115200);
-}
+  matrix.begin();
+  matrix.setRotation(0);
 
-uint8_t r, g, prevVal, val;
-int dataPos = 0;
+  Serial.begin(9600);
+  delay(1000);
+  Serial.println(F("Ready"));
+  Serial.println(F("Waiting for commands. Terminate with ';'."));
+}
 
 void loop()
 {
-    if (Serial.available())
-    {
-        prevVal = val;
-        val = Serial.read();
-
-        if ( (prevVal == 192 && val == 192) || dataPos >= 4096)
-        {
-            dataPos = 0;
-        }
-        else
-        {
-            interleavedBuffer[dataPos++] = val;
-        }
-    }
+  processSerial();
+  delay(1);
 }
 
-IntervalTimer timer1;
-
-#define BAMDUR 2
-void timerInit()
-{
-    BAM = 0;
-    timer1.begin(attackMatrix, BAMDUR);
+void processSerial() {
+  if (Serial.available())
+  {
+    byte len = Serial.readBytesUntil(';', buffer, BUFFERSIZE);
+    if (len > 0) {
+      buffer[len] = '\0';
+      parserString = String(buffer);
+      if (parserString.startsWith("M")) {
+        #if defined (DEBUG)
+        Serial.println(F("M"));
+        #endif
+        processMatrix(parserString.substring(1));
+      }
+    }
+  }
 }
 
+void processMatrix(String s) {
+  if (s.substring(0, 3).equalsIgnoreCase(F("ROT"))) {
+    byte rotation = byte(s.charAt(3));
+    #if defined (DEBUG)
+    Serial.println(rotation);
+    #endif
+    if (rotation >= 48 && rotation <= 51) {
+      matrix.setRotation(rotation - 48);
+    }
+    return;
+  }
 
+  if (s.substring(0, 3).equalsIgnoreCase(F("PXL"))) {
+    processPixelCommand(s.substring(3));
+  }
 
-//The updating matrix stuff happens here
-//Each pair of rows is taken through its BAM cycle,
-//then the rowNumber is increased and id done again
-void attackMatrix()
-{
-    uint16_t portData;
-
-    //sets up which BAM the matrix is on
-    if(BAM == 0)
-    {
-        timer1.begin(attackMatrix, BAMDUR);    //code takes max 41 microsec to complete
-    }
-    if(BAM == 1)
-    {
-        timer1.begin(attackMatrix, BAMDUR * 2);    //so 42 is a safe number
-    }
-    if(BAM == 2)
-    {
-        timer1.begin(attackMatrix, BAMDUR * 4);
-    }
-    if(BAM == 3)
-    {
-        timer1.begin(attackMatrix, BAMDUR * 8);
-    }
-    if(BAM == 4)
-    {
-        timer1.begin(attackMatrix, BAMDUR * 16);
-    }
-    if(BAM == 5)
-    {
-        timer1.begin(attackMatrix, BAMDUR * 32);
-    }
-    if(BAM == 6)
-    {
-        timer1.begin(attackMatrix, BAMDUR * 64);
-    }
-    if(BAM == 7)
-    {
-        timer1.begin(attackMatrix, BAMDUR * 128);
-    }
-
-    portData = 0; // Clear data to enter
-    portData |= (abcVar[rowN]) | OE; // abc, OE
-    portData &= ~ LATCH;       //LATCH LOW
-    GPIOC_PDOR = portData;  // Write to Port
-
-    uint8_t *start = &interleavedBuffer[rowN * SIZEX * 8 + ((7 - BAMMAX) + BAM) * 32];
-
-    for(uint8_t _x = 0; _x < 32; _x++)
-    {
-        GPIOD_PDOR = start[_x]; // Transfer data
-        GPIOC_PDOR |=  SCLK;// Clock HIGH
-        GPIOC_PDOR &= ~ SCLK; // Clock LOW
-    }
-
-    GPIOC_PDOR |= LATCH;// Latch HIGH
-    GPIOC_PDOR &= ~ OE; // OE LOW, Displays line
-
-
-    if(BAM >= BAMMAX)   //Checks the BAM cycle for next time.
-    {
-
-        if(rowN == 15)
-        {
-            rowN = 0;
-        }
-        else
-        {
-            rowN ++;
-        }
-        BAM = 0;
-        actDisplay = false;
-    }
-    else
-    {
-        BAM ++;
-        actDisplay = true;
-    }
+  if (s.substring(0,3).equalsIgnoreCase(F("SWP"))) {
+    matrix.swapBuffers(s.substring(3, 4) == "1");
+  }
 }
+
+/** s = x,y,r,g,b */
+void processPixelCommand(String s) {
+  uint8_t position, lastposition;
+  position = s.indexOf(",");
+  byte x = s.substring(0, position).toInt();
+  lastposition = 1 + position;
+  position = s.indexOf(",", lastposition);
+  byte y = s.substring(lastposition, position).toInt();
+  lastposition = 1 + position;
+  position = s.indexOf(",", lastposition);
+  byte r = s.substring(lastposition, position).toInt();
+  lastposition = 1 + position;
+  position = s.indexOf(",", lastposition);
+  byte g = s.substring(lastposition, position).toInt();
+  lastposition = 1 + position;
+  position = s.indexOf(",", lastposition);
+  byte b = s.substring(lastposition, position).toInt();
+  matrix.drawPixel(x, y, matrix.Color888(r, g, b));  
+}
+
