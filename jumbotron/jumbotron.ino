@@ -25,6 +25,7 @@ byte sinusAngle = 0; // rotation angle
 byte sinusAmpl = 0;  // amplitude
 
 byte displayMode = MODE_NONE;
+void updateFire();
 
 void setup()
 {
