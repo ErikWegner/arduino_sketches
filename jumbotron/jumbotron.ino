@@ -13,6 +13,7 @@ String parserString;
 
 #define MODE_NONE 0
 #define MODE_FIRE 1
+#define MODE_STARFIELD 2
 
 #define SINUS_OFF 0
 #define SINUS_RAISING 1
@@ -26,10 +27,13 @@ byte sinusAmpl = 0;  // amplitude
 
 byte displayMode = MODE_NONE;
 void updateFire();
+void setupStarfield();
+void starfield();
 
 void setup()
 {
-  displayMode = MODE_FIRE;
+  displayMode = MODE_STARFIELD;
+  setupStarfield();
   randomSeed(analogRead(0));
 
   matrix.begin();
@@ -44,8 +48,11 @@ void setup()
 void loop()
 {
   processSerial();
-  if (displayMode == MODE_FIRE) {
+  if ((displayMode & MODE_FIRE) > 0) {
     updateFire();
+  }
+  if ((displayMode & MODE_STARFIELD) > 0) {
+    starfield();
   }
   if (sinusStatus != SINUS_OFF) {
     processSinus();
