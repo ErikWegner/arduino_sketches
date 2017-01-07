@@ -1,10 +1,7 @@
 /*************************************************** 
-  This is a library for our I2C LED Backpacks
+  This is a library for our I2C LED Backpacks & FeatherWings
 
-  Designed specifically to work with the Adafruit LED Matrix backpacks 
-  ----> http://www.adafruit.com/products/872
-  ----> http://www.adafruit.com/products/871
-  ----> http://www.adafruit.com/products/870
+  Designed specifically to work with the Adafruit 16x8 LED Matrix FeatherWing
 
   These displays use I2C to communicate, 2 pins are required to 
   interface. There are multiple selectable I2C addresses. For backpacks
@@ -23,11 +20,12 @@
 #include <Adafruit_GFX.h>
 #include "Adafruit_LEDBackpack.h"
 
-Adafruit_BicolorMatrix matrix = Adafruit_BicolorMatrix();
+Adafruit_8x16minimatrix matrix = Adafruit_8x16minimatrix();
 
 void setup() {
+  //while (!Serial);
   Serial.begin(9600);
-  Serial.println("8x8 LED Matrix Test");
+  Serial.println("16x8 LED Mini Matrix Test");
   
   matrix.begin(0x70);  // pass in the address
 }
@@ -62,55 +60,58 @@ static const uint8_t PROGMEM
     B00111100 };
 
 void loop() {
-
+  
   matrix.clear();
-  matrix.drawBitmap(0, 0, smile_bmp, 8, 8, LED_GREEN);
+  matrix.drawBitmap(0, 0, smile_bmp, 8, 8, LED_ON);
+  matrix.writeDisplay();
+  delay(500);
+  
+  matrix.clear();
+  matrix.drawBitmap(0, 8, neutral_bmp, 8, 8, LED_ON);
   matrix.writeDisplay();
   delay(500);
 
   matrix.clear();
-  matrix.drawBitmap(0, 0, neutral_bmp, 8, 8, LED_YELLOW);
+  matrix.drawBitmap(0, 0, frown_bmp, 8, 8, LED_ON);
   matrix.writeDisplay();
   delay(500);
 
-  matrix.clear();
-  matrix.drawBitmap(0, 0, frown_bmp, 8, 8, LED_RED);
-  matrix.writeDisplay();
-  delay(500);
 
-  matrix.clear();      // clear display
-  matrix.drawPixel(0, 0, LED_GREEN);  
+  matrix.drawPixel(0, 0, LED_ON);  
   matrix.writeDisplay();  // write the changes we just made to the display
   delay(500);
 
   matrix.clear();
-  matrix.drawLine(0,0, 7,7, LED_YELLOW);
+  matrix.drawLine(0,0, 7,15, LED_ON);
   matrix.writeDisplay();  // write the changes we just made to the display
   delay(500);
 
   matrix.clear();
-  matrix.drawRect(0,0, 8,8, LED_RED);
-  matrix.fillRect(2,2, 4,4, LED_GREEN);
+  matrix.drawRect(0,0, 8,16, LED_ON);
+  matrix.fillRect(2,2, 4,12, LED_ON);
   matrix.writeDisplay();  // write the changes we just made to the display
   delay(500);
 
   matrix.clear();
-  matrix.drawCircle(3,3, 3, LED_YELLOW);
+  matrix.drawCircle(3,8, 3, LED_ON);
   matrix.writeDisplay();  // write the changes we just made to the display
   delay(500);
 
+  matrix.setTextSize(2);
   matrix.setTextWrap(false);  // we dont want text to wrap so it scrolls nicely
-  matrix.setTextSize(1);
-  matrix.setTextColor(LED_GREEN);
-  for (int8_t x=7; x>=-36; x--) {
+  matrix.setTextColor(LED_ON);
+  for (int8_t x=0; x>=-64; x--) {
     matrix.clear();
     matrix.setCursor(x,0);
     matrix.print("Hello");
     matrix.writeDisplay();
     delay(100);
   }
-  matrix.setRotation(3);
-  matrix.setTextColor(LED_RED);
+
+  matrix.setTextSize(1);
+  matrix.setTextWrap(false);  // we dont want text to wrap so it scrolls nicely
+  matrix.setTextColor(LED_ON);
+  matrix.setRotation(1);
   for (int8_t x=7; x>=-36; x--) {
     matrix.clear();
     matrix.setCursor(x,0);

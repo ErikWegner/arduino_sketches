@@ -1,3 +1,9 @@
 [submodule "libraries/RGB_matrix_Panel"]
 	path = libraries/RGB_matrix_Panel
 	url = https://github.com/ErikWegner/RGB-matrix-Panel.git
+[submodule "libraries/AnimatedGIFs"]
+	path = libraries/AnimatedGIFs
+	url = https://github.com/pixelmatix/AnimatedGIFs
+[submodule "libraries/sdfat"]
+	path = libraries/sdfat
+	url = https://github.com/greiman/SdFat-beta
