@@ -27,7 +27,6 @@ void setupStarfield() {
 }
 
 void starfield() {
-  matrix.fillScreen(0);
   int8_t star_screenx, star_screeny;
   
   for (uint8_t i = 0; i < starsCount; i++) {

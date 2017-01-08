@@ -1,7 +1,7 @@
 #include <Adafruit_GFX.h>   // Core graphics library
 #include <RGBmatrixPanel.h> // Hardware-specific library
 
-#define DEBUG_off 1
+#define DEBUG 0
 
 #define PANELWIDTH 64
 #define PANELHEIGHT 32
@@ -11,28 +11,29 @@ RGBmatrixPanel matrix(true, PANELWIDTH);
 char buffer[BUFFERSIZE + 1];
 String parserString;
 
+/*
+ * a buffer for string split results
+ * important for its size:
+ * 5 bytes: processPixelCommand
+ * 32 bytes: waver data
+ */
+uint8_t serialdatabuffer[32];
+
 #define MODE_NONE 0
 #define MODE_FIRE 1
 #define MODE_STARFIELD 2
+#define MODE_WAVER 4
 
-#define SINUS_OFF 0
-#define SINUS_RAISING 1
-#define SINUS_RUNNING 2
-#define SINUS_FALLING 3
-
-byte sinusStatus = SINUS_OFF;
-byte sinusDelta[PANELWIDTH];
-byte sinusAngle = 0; // rotation angle
-byte sinusAmpl = 0;  // amplitude
-
-byte displayMode = MODE_NONE;
+uint8_t displayMode = MODE_NONE;
 void updateFire();
 void setupStarfield();
 void starfield();
 
+unsigned long lasttime;
+
 void setup()
 {
-  displayMode = MODE_STARFIELD;
+  //displayMode = MODE_WAVER;
   setupStarfield();
   randomSeed(analogRead(0));
 
@@ -43,10 +44,14 @@ void setup()
   delay(1000);
   Serial.println(F("Ready"));
   Serial.println(F("Waiting for commands. Terminate with ';'."));
+
+  lasttime = millis();
 }
 
 void loop()
 {
+  unsigned long time = millis();
+  matrix.fillScreen(0);
   processSerial();
   if ((displayMode & MODE_FIRE) > 0) {
     updateFire();
@@ -54,26 +59,13 @@ void loop()
   if ((displayMode & MODE_STARFIELD) > 0) {
     starfield();
   }
-  if (sinusStatus != SINUS_OFF) {
-    processSinus();
-  }
-}
-
-void processSinus() {
-  if (sinusStatus == SINUS_RAISING) {
-    sinusAmpl++;
-    if (sinusAmpl >= 16) {
-      sinusAmpl = 16;
-      sinusStatus = SINUS_RUNNING;
+  if ((displayMode & MODE_WAVER) > 0) {
+    if (time - lasttime > 333) {
+      waverStep();
     }
-  }
-  if (sinusStatus == SINUS_FALLING) {
-    if (sinusAmpl >= 1) {
-      sinusAmpl--;
-    }
+    waverDraw();
   }
 
-  
 }
 
 void processSerial() {
@@ -84,7 +76,7 @@ void processSerial() {
       buffer[len] = '\0';
       parserString = String(buffer);
       if (parserString.startsWith("M")) {
-#if defined (DEBUG)
+#if DEBUG == 1
         Serial.println(F("M"));
 #endif
         processMatrix(parserString.substring(1));
@@ -96,7 +88,7 @@ void processSerial() {
 void processMatrix(String s) {
   if (s.substring(0, 3).equalsIgnoreCase(F("ROT"))) {
     byte rotation = byte(s.charAt(3));
-#if defined (DEBUG)
+#if DEBUG == 1
     Serial.println(rotation);
 #endif
     if (rotation >= 48 && rotation <= 51) {
@@ -115,21 +107,45 @@ void processMatrix(String s) {
     return;
   }
 
-  if (s.substring(0, 5).equalsIgnoreCase(F("SINUS"))) {
-    processSinus(s.substring(5));
+  if (s.substring(0, 4).equalsIgnoreCase(F("MODE"))) {
+    #if DEBUG == 1
+    Serial.println(F("Switching to ") + s.substring(4, 8));
+    #endif
+    switchMode(s.substring(4, 9));
+    #if DEBUG == 1
+    Serial.println(F("Mode is now ") + String(displayMode, 16));
+    #endif
+  }
+
+  if (s.substring(0, 6).equalsIgnoreCase(F("WAVROW"))) {
+    waverAddColumn(s.substring(6));
+  }
+}
+
+void switchMode(String s) {
+  if (s.equalsIgnoreCase(F("NONE"))) {
+    displayMode = MODE_NONE;
+    return;
+  }
+  if (s.equalsIgnoreCase(F("FIRE"))) {
+    displayMode = displayMode ^ MODE_FIRE;
+    return;
+  }
+  if (s.equalsIgnoreCase(F("STAR"))) {
+    displayMode = displayMode ^ MODE_STARFIELD;
+    return;
+  }
+  if (s.equalsIgnoreCase(F("WAVE"))) {
+    displayMode = displayMode ^ MODE_WAVER;
+    return;
+  }
+
+  if (s.equalsIgnoreCase(F("WAVE1"))) {
+    displayMode |= MODE_WAVER;
     return;
   }
 }
 
-void processSinus(String s) {
-  if (s.charAt(0) == 1) {
-    if (sinusStatus == SINUS_OFF) {
-      sinusStatus = SINUS_RAISING;
-    } else {
-      sinusStatus = SINUS_FALLING;
-    }
-  }
-}
 /** s = x,y,r,g,b */
 void processPixelCommand(String s) {
   uint8_t position, lastposition;
