@@ -51,7 +51,6 @@ void setup()
 void loop()
 {
   unsigned long time = millis();
-  matrix.fillScreen(0);
   processSerial();
   if ((displayMode & MODE_FIRE) > 0) {
     updateFire();
@@ -63,6 +62,7 @@ void loop()
     if (time - lasttime > 333) {
       waverStep();
     }
+    matrix.fillScreen(0);
     waverDraw();
   }
 
