@@ -21,11 +21,11 @@ void loop() {
 void bcmtimer() {
   g_tock--;
   if (g_tock <= 0) {
-    updatePanel();
-    g_tick = (g_tick * 2) & 07;
+    g_tick = (g_tick * 2) & 0xF;
     if (g_tick < 1) {
       g_tick = 1;
     }
     g_tock = g_tick;
+    updatePanel(g_tick);
   }
 }
