@@ -3,11 +3,14 @@ IntervalTimer myTimer;
 volatile uint8_t g_tick = 1;
 volatile uint8_t g_tock = 1;
 
-void blinkLED();
+void bcmtimer();
+void updatePanel();
+void setupPanelPins();
 
 void setup() {
   // put your setup code here, to run once:
-  myTimer.begin(blinkLED, 500000);
+  setupPanelPins();
+  myTimer.begin(bcmtimer, 500000);
 }
 
 void loop() {
@@ -15,21 +18,14 @@ void loop() {
 
 }
 
-void blinkLED() {
-  Serial.print(F("tick="));
-  Serial.print(g_tick);
-  Serial.print(F(" tock="));
-  Serial.print(g_tock);
-
+void bcmtimer() {
   g_tock--;
   if (g_tock <= 0) {
-    Serial.print(F(" switch"));
+    updatePanel();
     g_tick = (g_tick * 2) & 07;
     if (g_tick < 1) {
       g_tick = 1;
     }
     g_tock = g_tick;
   }
-
-  Serial.println();
 }
