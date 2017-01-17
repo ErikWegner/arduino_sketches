@@ -26,14 +26,3 @@ void loop() {
   //setupBuffer(7 - lightpos);
 }
 
-void bcmtimer() {
-  g_tock--;
-  if (g_tock <= 0) {
-    g_tick++;
-    if (g_tick > 3) {
-      g_tick = 0;
-    }
-    g_tock = 1 << g_tick;
-    updatePanel(g_tick);
-  }
-}

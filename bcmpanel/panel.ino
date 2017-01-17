@@ -1,5 +1,6 @@
 #define DEBUG 0
 
+#define BCM_RESOLUTION 5
 #define CLK 19
 #define LAT 18
 #define OE  17
@@ -11,15 +12,15 @@
 #define DATADIR  DDRD
 #define WIDTH 64
 
-uint8_t buffer[4][8]; // first dimension: time, second dimension pixel
+uint8_t buffer[BCM_RESOLUTION][8]; // first dimension: time, second dimension pixel
 
-uint8_t intensities[8] = {1, 1, 1, 2, 3, 4, 8, 15};
+uint8_t intensities[8] = {1, 2, 3, 4, 5, 6, 15, 31}; // max: (1 << BCM_RESOLUTION) - 1
 
 void setupBuffer(uint8_t highpos) {
   for (uint8_t c_pixel = 0; c_pixel < 8; c_pixel++) {
     uint8_t intensity = intensities[(highpos + c_pixel) % 8];
 
-    for (uint8_t c_time = 0; c_time < 4; c_time++) {
+    for (uint8_t c_time = 0; c_time < BCM_RESOLUTION; c_time++) {
       // is bit set for this pixel's brightness
       if ((intensity & (1 << c_time)) > 0) {
         buffer[c_time][c_pixel] = B00100000;
@@ -81,3 +82,14 @@ void updatePanel(uint8_t c_time) {
 #endif
 }
 
+void bcmtimer() {
+  g_tock--;
+  if (g_tock <= 0) {
+    g_tick++;
+    if (g_tick > BCM_RESOLUTION - 1) {
+      g_tick = 0;
+    }
+    g_tock = 1 << g_tick;
+    updatePanel(g_tick);
+  }
+}
