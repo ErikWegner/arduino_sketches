@@ -1,3 +1,5 @@
+#define DEBUG 0
+
 #define CLK 19
 #define LAT 18
 #define OE  17
@@ -11,13 +13,15 @@
 
 uint8_t buffer[4][8]; // first dimension: time, second dimension pixel
 
+uint8_t intensities[8] = {1, 2, 3, 4, 6, 8, 10, 16};
+
 void setupBuffer() {
   for (uint8_t c_pixel = 0; c_pixel < 8; c_pixel++) {
-    uint8_t intensity = c_pixel * 2 - 1;
-    
+    uint8_t intensity = intensities[c_pixel];
+
     for (uint8_t c_time = 0; c_time < 4; c_time++) {
       // is bit set for this pixel's brightness
-      if ((c_pixel & (1 << c_time)) > 0) {
+      if ((intensity & (1 << c_time)) > 0) {
         buffer[c_time][c_pixel] |= B00100000;
       }
     }
@@ -40,7 +44,10 @@ void setupPanelPins() {
 }
 
 void updatePanel(uint8_t c_time) {
+#if DEBUG == 1
   Serial.print(F("Updating panel... "));
+  Serial.print(c_time);
+#endif
 
   digitalWriteFast(OE, HIGH); // Re-enable output
   digitalWriteFast(LAT, LOW); // Latch down
@@ -51,7 +58,7 @@ void updatePanel(uint8_t c_time) {
   uint16_t  i;
   for (i = 0; i < WIDTH ; i++) {
     if (i < 8) {
-      DATAPORT = buffer[c_time - 1][i];
+      DATAPORT = buffer[c_time][i];
     } else {
       DATAPORT = B00000000;
     }
@@ -67,6 +74,8 @@ void updatePanel(uint8_t c_time) {
 
   digitalWriteFast(OE, LOW); // Disable LED output during row/plane switchover
   digitalWriteFast(LAT, HIGH); // Latch data loaded during *prior* interrupt
+#if DEBUG == 1
   Serial.println(F(" done"));
+#endif
 }
 

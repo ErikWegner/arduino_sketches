@@ -9,8 +9,9 @@ void setupPanelPins();
 
 void setup() {
   // put your setup code here, to run once:
+  delay(750);
   setupPanelPins();
-  myTimer.begin(bcmtimer, 500000);
+  myTimer.begin(bcmtimer, 100); // 1/1.000.000 seconds
 }
 
 void loop() {
@@ -21,11 +22,11 @@ void loop() {
 void bcmtimer() {
   g_tock--;
   if (g_tock <= 0) {
-    g_tick = (g_tick * 2) & 0xF;
-    if (g_tick < 1) {
-      g_tick = 1;
+    g_tick++;
+    if (g_tick > 3) {
+      g_tick = 0;
     }
-    g_tock = g_tick;
+    g_tock = 1 << g_tick;
     updatePanel(g_tick);
   }
 }
