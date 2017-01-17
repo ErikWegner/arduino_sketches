@@ -13,16 +13,18 @@
 
 uint8_t buffer[4][8]; // first dimension: time, second dimension pixel
 
-uint8_t intensities[8] = {1, 2, 3, 4, 6, 8, 10, 16};
+uint8_t intensities[8] = {1, 1, 1, 2, 3, 4, 8, 15};
 
-void setupBuffer() {
+void setupBuffer(uint8_t highpos) {
   for (uint8_t c_pixel = 0; c_pixel < 8; c_pixel++) {
-    uint8_t intensity = intensities[c_pixel];
+    uint8_t intensity = intensities[(highpos + c_pixel) % 8];
 
     for (uint8_t c_time = 0; c_time < 4; c_time++) {
       // is bit set for this pixel's brightness
       if ((intensity & (1 << c_time)) > 0) {
-        buffer[c_time][c_pixel] |= B00100000;
+        buffer[c_time][c_pixel] = B00100000;
+      } else {
+        buffer[c_time][c_pixel] = 0;
       }
     }
   }
@@ -40,7 +42,7 @@ void setupPanelPins() {
   DATADIR = B11111100;
   DATAPORT = 0;
 
-  setupBuffer();
+  setupBuffer(0);
 }
 
 void updatePanel(uint8_t c_time) {

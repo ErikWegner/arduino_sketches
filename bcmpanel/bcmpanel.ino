@@ -3,6 +3,8 @@ IntervalTimer myTimer;
 volatile uint8_t g_tick = 1;
 volatile uint8_t g_tock = 1;
 
+uint8_t lightpos = 0;
+
 void bcmtimer();
 void updatePanel();
 void setupPanelPins();
@@ -16,7 +18,12 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-
+  delay(150);
+  lightpos = lightpos + 1;
+  if (lightpos > 7) {
+    lightpos = 0;
+  }
+  //setupBuffer(7 - lightpos);
 }
 
 void bcmtimer() {
