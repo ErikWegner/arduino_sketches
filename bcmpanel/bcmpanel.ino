@@ -14,9 +14,10 @@ void setup() {
   // put your setup code here, to run once:
   delay(750);
   setupPanelPins();
-  myTimer.begin(bcmtimer, 160); // 1/1.000.000 seconds
+  myTimer.begin(bcmtimer, 150); // 1/1.000.000 seconds
   //drawPixel(1, 1, 65535);
   drawPixel555(0, 0, 0, 0, 31);
+  drawPixel555(0, 30, 31, 31, 31);
   //drawPixel555(4, 4, 0, 31, 31);
   //drawPixel555(6, 6, 31, 0, 31);
   //drawPixel555(8, 15, 31, 31, 0);

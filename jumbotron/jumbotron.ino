@@ -12,11 +12,11 @@ char buffer[BUFFERSIZE + 1];
 String parserString;
 
 /*
- * a buffer for string split results
- * important for its size:
- * 5 bytes: processPixelCommand
- * 32 bytes: waver data
- */
+   a buffer for string split results
+   important for its size:
+   5 bytes: processPixelCommand
+   32 bytes: waver data
+*/
 uint8_t serialdatabuffer[32];
 
 #define MODE_NONE 0
@@ -61,9 +61,9 @@ void loop()
   if ((displayMode & MODE_WAVER) > 0) {
     if (time - lasttime > 333) {
       waverStep();
+      matrix.fillScreen(0);
+      waverDraw();
     }
-    matrix.fillScreen(0);
-    waverDraw();
   }
 
 }
@@ -108,13 +108,13 @@ void processMatrix(String s) {
   }
 
   if (s.substring(0, 4).equalsIgnoreCase(F("MODE"))) {
-    #if DEBUG == 1
+#if DEBUG == 1
     Serial.println(F("Switching to ") + s.substring(4, 8));
-    #endif
-    switchMode(s.substring(4, 9));
-    #if DEBUG == 1
+#endif
+    switchMode(s.substring(4));
+#if DEBUG == 1
     Serial.println(F("Mode is now ") + String(displayMode, 16));
-    #endif
+#endif
   }
 
   if (s.substring(0, 6).equalsIgnoreCase(F("WAVROW"))) {

@@ -13,6 +13,7 @@
 #define DATADIR  DDRD
 #define WIDTH 64
 #define HEIGHT 32
+#define paneldelay delayMicroseconds(8);
 
 uint8_t buffer[BCM_RESOLUTION][WIDTH * HEIGHT / 2]; // first dimension: time, second dimension pixel
 
@@ -43,7 +44,7 @@ void drawPixel(uint16_t x, uint16_t y, uint16_t c) {
 void drawPixel555(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b) {
   if ((x < 0) || (x >= WIDTH) || (y < 0) || (y >= HEIGHT)) return;
   uint8_t addressmask, bcmbit, colorvalue;
-  uint16_t c_pixel = (y >= HEIGHT ? y - HEIGHT/2 : y) * WIDTH + x;
+  uint16_t c_pixel = (y >= HEIGHT ? y - HEIGHT / 2 : y) * WIDTH + x;
   addressmask = (y >= HEIGHT / 2) ? B11100000 : B00011100;
 
   for (uint8_t c_time = 0; c_time < BCM_RESOLUTION; c_time++) {
@@ -92,6 +93,9 @@ void setupPanelPins() {
   setupBuffer(0);
 }
 
+/*
+   see https://cdn-learn.adafruit.com/downloads/pdf/connecting-a-16x32-rgb-led-matrix-panel-to-a-raspberry-pi.pdf
+*/
 void updatePanel(uint8_t c_time) {
 #if DEBUG == 1
   Serial.print(F("Updating panel... "));
@@ -102,12 +106,14 @@ void updatePanel(uint8_t c_time) {
 #endif
   uint16_t i;
 
-  digitalWriteFast(OE, LOW);
-  for (uint8_t y = 0; y < HEIGHT / 2; y++) {
-    digitalWriteFast(A, y & 0x1);
-    digitalWriteFast(B, y & 0x2);
-    digitalWriteFast(C, y & 0x4);
-    digitalWriteFast(D, y & 0x8);
+
+    digitalWriteFast(OE, LOW);
+    paneldelay
+  for (uint8_t y = 0; y < 2; y++) {
+    digitalWriteFast(A, (y & 0x1) > 0 ? HIGH : LOW);
+    digitalWriteFast(B, (y & 0x2) > 0 ? HIGH : LOW);
+    digitalWriteFast(C, (y & 0x4) > 0 ? HIGH : LOW);
+    digitalWriteFast(D, (y & 0x8) > 0 ? HIGH : LOW);
     for (i = 0; i < WIDTH ; i++) {
       DATAPORT = buffer[c_time][y * WIDTH + i];
       digitalWriteFast(CLK, HIGH);
@@ -115,13 +121,17 @@ void updatePanel(uint8_t c_time) {
       __asm__("nop\n\t");
       digitalWriteFast(CLK, LOW);
     }
+    __asm__("nop\n\t");
+    __asm__("nop\n\t");
     digitalWriteFast(LAT, HIGH);
     __asm__("nop\n\t");
     __asm__("nop\n\t");
     digitalWriteFast(LAT, LOW);
+    __asm__("nop\n\t");
+    __asm__("nop\n\t");
   }
-
-  digitalWriteFast(OE, HIGH);
+    digitalWriteFast(OE, HIGH);
+    paneldelay
 #if BENCHMARK == 1
   benchmark_results[benchmark_sampleindex] = micros() - starttime;
   benchmark_sampleindex++;

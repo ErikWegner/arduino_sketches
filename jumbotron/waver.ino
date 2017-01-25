@@ -39,9 +39,6 @@ void waverDraw() {
       /* read the pixel value */
       uint16_t pixel = waverBuffer[waverReadPos][y];
       /* draw the pixel if it is not black */
-#if DEBUG == 1
-      matrix.drawPixel(column, relocate_y + y, matrix.Color888(64, 32, 0));
-#endif
       if (pixel > 0) {
         matrix.drawPixel(column, relocate_y + y, pixel);
       }
