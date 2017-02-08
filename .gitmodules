@@ -4,6 +4,3 @@
 [submodule "libraries/AnimatedGIFs"]
 	path = libraries/AnimatedGIFs
 	url = https://github.com/pixelmatix/AnimatedGIFs
-[submodule "libraries/sdfat"]
-	path = libraries/sdfat
-	url = https://github.com/greiman/SdFat-beta

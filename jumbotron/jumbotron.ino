@@ -1,7 +1,7 @@
 #include <Adafruit_GFX.h>   // Core graphics library
 #include <RGBmatrixPanel.h> // Hardware-specific library
 
-#define DEBUG 0
+#define DEBUG 1
 
 #define PANELWIDTH 64
 #define PANELHEIGHT 32
@@ -119,6 +119,13 @@ void processMatrix(String s) {
 
   if (s.substring(0, 6).equalsIgnoreCase(F("WAVROW"))) {
     waverAddColumn(s.substring(6));
+  }
+
+  if (s.substring(0, 4).equalsIgnoreCase(F("SDLS"))) {
+#if DEBUG == 1
+    Serial.println(F("Accessing SD to list files ") + s.substring(4, 8));
+#endif
+    sdListDirectory();
   }
 }
 
