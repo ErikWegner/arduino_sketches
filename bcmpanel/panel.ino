@@ -1,7 +1,7 @@
 #define DEBUG 0
-#define BENCHMARK 1
+#define BENCHMARK 0
 
-#define BCM_RESOLUTION 5
+#define BCM_RESOLUTION 6
 #define CLK 19
 #define LAT 18
 #define OE  17
@@ -13,15 +13,20 @@
 #define DATADIR  DDRD
 #define WIDTH 64
 #define HEIGHT 32
-#define paneldelay delayMicroseconds(8);
 
 uint8_t buffer[BCM_RESOLUTION][WIDTH * HEIGHT / 2]; // first dimension: time, second dimension pixel
-
-uint8_t intensities[8] = {1, 2, 3, 4, 5, 6, 15, 31}; // max: (1 << BCM_RESOLUTION) - 1
+volatile uint8_t is_drawing = 0;
+uint8_t intensities[8] = {1, 2, 3, 7, 15, 20, 31, 127}; // max: (1 << BCM_RESOLUTION) - 1
+uint8_t rgbgamma[32] = { 
+  0, 0, 1, 1, 1, 2, 2, 2,  
+  3, 3, 4, 4, 4, 5, 5, 5,
+  6, 6, 7, 7, 8, 8, 9, 9,
+  10, 12, 14, 16, 18, 20, 31, 63
+};
 
 #if BENCHMARK == 1
-#define BENCHMARKSAMPLES 1000
-volatile uint16_t benchmark_results[BENCHMARKSAMPLES] = { 0 };
+#define BENCHMARKSAMPLES 2000
+volatile unsigned long benchmark_results[BENCHMARKSAMPLES] = { 0 };
 volatile uint16_t benchmark_sampleindex = 0;
 volatile uint8_t  benchmark_output = 0;
 #endif
@@ -34,17 +39,16 @@ void drawPixel(uint16_t x, uint16_t y, uint16_t c) {
   if ((x < 0) || (x >= WIDTH) || (y < 0) || (y >= HEIGHT)) return;
   /* TODO: support rotation */
 
-  // calculate bcm values for each color
-  r = c >> 11;                           // RRRRRggggggbbbbb
-  g = (c >> 6) & ((1 << BCM_RESOLUTION) - 1); // RRRRRggggggbbbbb
-  b = c        & ((1 << BCM_RESOLUTION) - 1); // RRRRRggggggbbbbb
-  drawPixel555(x, y, r, g, b);
+  r = c >> 11;       // RRRRRggggggbbbbb
+  g = (c >> 6) & 31; // rrrrrGGGGGgbbbbb
+  b = c & 31;        // rrrrrggggggBBBBB
+  drawPixel555(x, y, rgbgamma[r], rgbgamma[g], rgbgamma[b]);
 }
 
 void drawPixel555(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b) {
   if ((x < 0) || (x >= WIDTH) || (y < 0) || (y >= HEIGHT)) return;
   uint8_t addressmask, bcmbit, colorvalue;
-  uint16_t c_pixel = (y >= HEIGHT ? y - HEIGHT / 2 : y) * WIDTH + x;
+  uint16_t c_pixel = (y >= HEIGHT / 2 ? y - HEIGHT / 2 : y) * WIDTH + x;
   addressmask = (y >= HEIGHT / 2) ? B11100000 : B00011100;
 
   for (uint8_t c_time = 0; c_time < BCM_RESOLUTION; c_time++) {
@@ -70,7 +74,7 @@ void setupBuffer(uint8_t highpos) {
     for (uint8_t c_time = 0; c_time < BCM_RESOLUTION; c_time++) {
       // is bit set for this pixel's brightness
       if ((intensity & (1 << c_time)) > 0) {
-        buffer[c_time][c_pixel] = B11100000;
+        buffer[c_time][c_pixel] = B00101000;
       } else {
         buffer[c_time][c_pixel] = 0;
       }
@@ -97,6 +101,7 @@ void setupPanelPins() {
    see https://cdn-learn.adafruit.com/downloads/pdf/connecting-a-16x32-rgb-led-matrix-panel-to-a-raspberry-pi.pdf
 */
 void updatePanel(uint8_t c_time) {
+  is_drawing = 1;
 #if DEBUG == 1
   Serial.print(F("Updating panel... "));
   Serial.print(c_time);
@@ -106,13 +111,22 @@ void updatePanel(uint8_t c_time) {
 #endif
   uint16_t i;
 
+  digitalWriteFast(OE, HIGH);
+  digitalWriteFast(A, HIGH);
+  digitalWriteFast(B, HIGH);
+  digitalWriteFast(C, HIGH);
+  digitalWriteFast(D, HIGH);
+  __asm__("nop\n\t");
+  __asm__("nop\n\t");
+  digitalWriteFast(OE, LOW);
+  __asm__("nop\n\t");
+  __asm__("nop\n\t");
 
-  reset_row();
+
   for (uint8_t y = 0; y < 16; y++) {
     digitalWriteFast(LAT, LOW);
     __asm__("nop\n\t");
     __asm__("nop\n\t");
-
     for (i = 0; i < WIDTH ; i++) {
       DATAPORT = buffer[c_time][y * WIDTH + i];
       digitalWriteFast(CLK, HIGH);
@@ -120,7 +134,8 @@ void updatePanel(uint8_t c_time) {
       __asm__("nop\n\t");
       digitalWriteFast(CLK, LOW);
     }
-
+    __asm__("nop\n\t");
+    __asm__("nop\n\t");
     digitalWriteFast(OE, HIGH);
     digitalWriteFast(A, (y & 0x1) > 0 ? HIGH : LOW);
     digitalWriteFast(B, (y & 0x2) > 0 ? HIGH : LOW);
@@ -129,13 +144,12 @@ void updatePanel(uint8_t c_time) {
     __asm__("nop\n\t");
     __asm__("nop\n\t");
     digitalWriteFast(OE, LOW);
+
     __asm__("nop\n\t");
     __asm__("nop\n\t");
     digitalWriteFast(LAT, HIGH);
-    __asm__("nop\n\t");
-    __asm__("nop\n\t");
   }
-  
+
 #if BENCHMARK == 1
   benchmark_results[benchmark_sampleindex] = micros() - starttime;
   benchmark_sampleindex++;
@@ -147,9 +161,13 @@ void updatePanel(uint8_t c_time) {
 #if DEBUG == 1
   Serial.println(F(" done"));
 #endif
+  is_drawing = 0;
 }
 
 void bcmtimer() {
+  if (is_drawing > 0) {
+    return;
+  }
   g_tock--;
   if (g_tock <= 0) {
     g_tick++;
@@ -175,14 +193,19 @@ void benchmark() {
 #endif
 }
 
-void reset_row() {
-  digitalWriteFast(OE, HIGH);
-  digitalWriteFast(A, LOW);
-  digitalWriteFast(B, LOW);
-  digitalWriteFast(C, LOW);
-  digitalWriteFast(D, LOW);  
-  __asm__("nop\n\t");
-  __asm__("nop\n\t");
-  digitalWriteFast(OE, LOW);
+
+void drawImage() {
+  for (uint8_t y = 0; y < HEIGHT; y++) {
+    for (uint8_t x = 0; x < WIDTH; x++)
+    {
+      drawPixel(x, y, pgm_read_word_near(color_image + 2 * (y * WIDTH + x)));
+    }
+  }
+}
+
+void debugBuffer() {
+  for (uint8_t c_time = 0; c_time < BCM_RESOLUTION; c_time++) {
+    Serial.println(buffer[c_time][3 + 16 * WIDTH], BIN);
+  }
 }
 
