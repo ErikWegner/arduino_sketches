@@ -17,11 +17,21 @@
 uint8_t buffer[BCM_RESOLUTION][WIDTH * HEIGHT / 2]; // first dimension: time, second dimension pixel
 volatile uint8_t is_drawing = 0;
 uint8_t intensities[8] = {1, 2, 3, 7, 15, 20, 31, 127}; // max: (1 << BCM_RESOLUTION) - 1
+//uint8_t rgbgamma[32] = { 
+//  0, 0, 1, 1, 1, 2, 2, 2,  
+//  3, 3, 4, 4, 4, 5, 5, 5,
+//  6, 6, 7, 7, 8, 8, 9, 9,
+//  10, 12, 14, 16, 18, 20, 31, 63
+//};
+/* (x / 11.3) ^ 4 https://rechneronline.de/function-graphs/ 
+ input values: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32
+ output values: 0-63
+*/
 uint8_t rgbgamma[32] = { 
-  0, 0, 1, 1, 1, 2, 2, 2,  
-  3, 3, 4, 4, 4, 5, 5, 5,
-  6, 6, 7, 7, 8, 8, 9, 9,
-  10, 12, 14, 16, 18, 20, 31, 63
+  0, 0, 0, 0, 0, 0, 0, 0,
+  0, 1, 1, 1, 2, 2, 3, 4,
+  5, 6, 8, 10, 12, 14, 17, 20,
+  24, 28, 33, 38, 43, 50, 57, 63
 };
 
 #if BENCHMARK == 1
@@ -198,7 +208,7 @@ void drawImage() {
   for (uint8_t y = 0; y < HEIGHT; y++) {
     for (uint8_t x = 0; x < WIDTH; x++)
     {
-      drawPixel(x, y, pgm_read_word_near(color_image + 2 * (y * WIDTH + x)));
+      drawPixel(x, y, pgm_read_word_near(gimp_image + 2 * (y * WIDTH + x)));
     }
   }
 }
