@@ -15,13 +15,13 @@ void setup() {
   delay(750);
   setupPanelPins();
   myTimer.begin(bcmtimer, 150); // 1/1.000.000 seconds
-  //drawPixel(1, 1, 65535);
+  drawPixel(1, 1, 65535);
   drawPixel555(0, 0, 0, 0, 31);
   drawPixel555(0, 30, 31, 31, 31);
-  //drawPixel555(4, 4, 0, 31, 31);
-  //drawPixel555(6, 6, 31, 0, 31);
-  //drawPixel555(8, 15, 31, 31, 0);
-  //drawPixel555(10, 16, 1, 1, 0);
+  drawPixel555(4, 4, 0, 31, 31);
+  drawPixel555(6, 6, 31, 0, 31);
+  drawPixel555(8, 15, 31, 31, 0);
+  drawPixel555(10, 16, 1, 1, 0);
 }
 
 void loop() {
@@ -32,6 +32,6 @@ void loop() {
   if (lightpos > 7) {
     lightpos = 0;
   }
-  //setupBuffer(7 - lightpos);
+  setupBuffer(7 - lightpos);
 }
 

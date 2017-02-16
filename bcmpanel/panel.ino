@@ -107,13 +107,12 @@ void updatePanel(uint8_t c_time) {
   uint16_t i;
 
 
-    digitalWriteFast(OE, LOW);
-    paneldelay
-  for (uint8_t y = 0; y < 2; y++) {
-    digitalWriteFast(A, (y & 0x1) > 0 ? HIGH : LOW);
-    digitalWriteFast(B, (y & 0x2) > 0 ? HIGH : LOW);
-    digitalWriteFast(C, (y & 0x4) > 0 ? HIGH : LOW);
-    digitalWriteFast(D, (y & 0x8) > 0 ? HIGH : LOW);
+  reset_row();
+  for (uint8_t y = 0; y < 16; y++) {
+    digitalWriteFast(LAT, LOW);
+    __asm__("nop\n\t");
+    __asm__("nop\n\t");
+
     for (i = 0; i < WIDTH ; i++) {
       DATAPORT = buffer[c_time][y * WIDTH + i];
       digitalWriteFast(CLK, HIGH);
@@ -121,17 +120,22 @@ void updatePanel(uint8_t c_time) {
       __asm__("nop\n\t");
       digitalWriteFast(CLK, LOW);
     }
+
+    digitalWriteFast(OE, HIGH);
+    digitalWriteFast(A, (y & 0x1) > 0 ? HIGH : LOW);
+    digitalWriteFast(B, (y & 0x2) > 0 ? HIGH : LOW);
+    digitalWriteFast(C, (y & 0x4) > 0 ? HIGH : LOW);
+    digitalWriteFast(D, (y & 0x8) > 0 ? HIGH : LOW);
+    __asm__("nop\n\t");
+    __asm__("nop\n\t");
+    digitalWriteFast(OE, LOW);
     __asm__("nop\n\t");
     __asm__("nop\n\t");
     digitalWriteFast(LAT, HIGH);
     __asm__("nop\n\t");
     __asm__("nop\n\t");
-    digitalWriteFast(LAT, LOW);
-    __asm__("nop\n\t");
-    __asm__("nop\n\t");
   }
-    digitalWriteFast(OE, HIGH);
-    paneldelay
+  
 #if BENCHMARK == 1
   benchmark_results[benchmark_sampleindex] = micros() - starttime;
   benchmark_sampleindex++;
@@ -169,5 +173,16 @@ void benchmark() {
     Serial.println(F(" time per panel update "));
   }
 #endif
+}
+
+void reset_row() {
+  digitalWriteFast(OE, HIGH);
+  digitalWriteFast(A, LOW);
+  digitalWriteFast(B, LOW);
+  digitalWriteFast(C, LOW);
+  digitalWriteFast(D, LOW);  
+  __asm__("nop\n\t");
+  __asm__("nop\n\t");
+  digitalWriteFast(OE, LOW);
 }
 
