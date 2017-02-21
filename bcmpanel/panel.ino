@@ -45,16 +45,19 @@ uint8_t intensities[8] = {1, 3, 5, 7, 9, 11, 13, 15}; // max: (1 << BCM_RESOLUTI
   11, 12, 15, 17, 20, 23, 26, 31
   };*/
 
-/* (x / 10.45) ^ 2.5 https://rechneronline.de/function-graphs/
-  input values: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32
+/* (x / 5.1) ^ 1.5 https://rechneronline.de/function-graphs/
+  input values: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
   output values: 0-15
 */
-uint8_t rgbgamma[32] = {
-  0, 0, 0, 0, 0, 0, 0, 0,
-  1, 1, 1, 1, 1, 2, 2, 2,
-  3, 3, 4, 4, 5, 6, 6, 7,
-  8, 9, 10, 11, 12, 13, 14, 15
-};
+uint8_t rgbgamma[32] = {0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 10, 10, 11, 12, 12, 13, 14, 14, 15};
+
+/*
+  n = document.createElement("script")
+  n.setAttribute("src", "https://code.jquery.com/jquery-3.1.1.min.js")
+  document.head.appendChild(n)
+
+  a = []; jQuery("tr").eq(1).find("td").each(function() {a.push(Math.round(parseFloat($(this).text().trim())));}); console.log(a.join(","));
+*/
 
 #if BENCHMARK == 1
 #define BENCHMARKSAMPLES 2000
@@ -190,14 +193,15 @@ void bcmtimer() {
 
   g_tock--;
   if (g_tock <= 0) {
-    row++;
-    if (row >= HEIGHT / 2) {
-      row = 0;
-      g_tick++;
-      if (g_tick > BCM_RESOLUTION - 1) {
-        g_tick = 0;
+    g_tick++;
+    if (g_tick > BCM_RESOLUTION - 1) {
+      g_tick = 0;
+      row++;
+      if (row >= HEIGHT / 2) {
+        row = 0;
       }
     }
+
     g_tock = 1 << g_tick;
     updatePanel(g_tick, row);
   }
@@ -220,18 +224,27 @@ void benchmark() {
 uint8_t image_drawImage = 0;
 void drawImage() {
   image_drawImage++;
-  if (image_drawImage > 1) {
+  if (image_drawImage > 3) {
     image_drawImage = 0;
+  }
+
+  uint8_t *imgptr = (uint8_t *)color_image;
+  switch(image_drawImage) {
+    case 1:
+      imgptr = (uint8_t *)gimp_image;
+      break;
+    case 2:
+      imgptr = (uint8_t *)night_image;
+      break;
+    case 3:
+      imgptr = (uint8_t *)emblem_image;
+      break;
   }
 
   for (uint8_t y = 0; y < HEIGHT; y++) {
     for (uint8_t x = 0; x < WIDTH; x++)
     {
-      if (image_drawImage == 0) {
-        drawPixel(x, y, pgm_read_word_near(color_image + 2 * (y * WIDTH + x)));
-      } else {
-        drawPixel(x, y, pgm_read_word_near(gimp_image + 2 * (y * WIDTH + x)));
-      }
+      drawPixel(x, y, pgm_read_word_near(imgptr + 2 * (y * WIDTH + x)));
     }
   }
 }
