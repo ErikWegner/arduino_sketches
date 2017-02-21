@@ -1,7 +1,7 @@
 #define DEBUG 0
 #define BENCHMARK 0
 
-#define BCM_RESOLUTION 6
+#define BCM_RESOLUTION 4
 #define CLK 19
 #define LAT 18
 #define OE  17
@@ -16,22 +16,44 @@
 
 uint8_t buffer[BCM_RESOLUTION][WIDTH * HEIGHT / 2]; // first dimension: time, second dimension pixel
 volatile uint8_t is_drawing = 0;
-uint8_t intensities[8] = {1, 2, 3, 7, 15, 20, 31, 127}; // max: (1 << BCM_RESOLUTION) - 1
-//uint8_t rgbgamma[32] = { 
-//  0, 0, 1, 1, 1, 2, 2, 2,  
+uint8_t intensities[8] = {1, 3, 5, 7, 9, 11, 13, 15}; // max: (1 << BCM_RESOLUTION) - 1
+//uint8_t rgbgamma[32] = {
+//  0, 0, 1, 1, 1, 2, 2, 2,
 //  3, 3, 4, 4, 4, 5, 5, 5,
 //  6, 6, 7, 7, 8, 8, 9, 9,
 //  10, 12, 14, 16, 18, 20, 31, 63
 //};
-/* (x / 11.3) ^ 4 https://rechneronline.de/function-graphs/ 
- input values: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32
- output values: 0-63
+/* (x / 11.3) ^ 4 https://rechneronline.de/function-graphs/
+  input values: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32
+  output values: 0-63
 */
-uint8_t rgbgamma[32] = { 
+/*uint8_t rgbgamma[32] = {
   0, 0, 0, 0, 0, 0, 0, 0,
   0, 1, 1, 1, 2, 2, 3, 4,
   5, 6, 8, 10, 12, 14, 17, 20,
   24, 28, 33, 38, 43, 50, 57, 63
+  };*/
+
+/* (x / 13.3) ^ 4 https://rechneronline.de/function-graphs/
+  input values: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32
+  output values: 0-31
+*/
+/*uint8_t rgbgamma[32] = {
+  0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 1, 1, 1, 2, 2,
+  3, 3, 3, 4, 5, 6, 7, 9,
+  11, 12, 15, 17, 20, 23, 26, 31
+  };*/
+
+/* (x / 10.45) ^ 2.5 https://rechneronline.de/function-graphs/
+  input values: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32
+  output values: 0-15
+*/
+uint8_t rgbgamma[32] = {
+  0, 0, 0, 0, 0, 0, 0, 0,
+  1, 1, 1, 1, 1, 2, 2, 2,
+  3, 3, 4, 4, 5, 6, 6, 7,
+  8, 9, 10, 11, 12, 13, 14, 15
 };
 
 #if BENCHMARK == 1
@@ -110,7 +132,7 @@ void setupPanelPins() {
 /*
    see https://cdn-learn.adafruit.com/downloads/pdf/connecting-a-16x32-rgb-led-matrix-panel-to-a-raspberry-pi.pdf
 */
-void updatePanel(uint8_t c_time) {
+void updatePanel(uint8_t c_time, uint8_t y) {
   is_drawing = 1;
 #if DEBUG == 1
   Serial.print(F("Updating panel... "));
@@ -122,43 +144,25 @@ void updatePanel(uint8_t c_time) {
   uint16_t i;
 
   digitalWriteFast(OE, HIGH);
-  digitalWriteFast(A, HIGH);
-  digitalWriteFast(B, HIGH);
-  digitalWriteFast(C, HIGH);
-  digitalWriteFast(D, HIGH);
+  digitalWriteFast(LAT, HIGH);
+  __asm__("nop\n\t");
+  __asm__("nop\n\t");
+
+  for (i = 0; i < WIDTH ; i++) {
+    DATAPORT = buffer[c_time][y * WIDTH + i];
+    digitalWriteFast(CLK, HIGH);
+    __asm__("nop\n\t");
+    __asm__("nop\n\t");
+    digitalWriteFast(CLK, LOW);
+  }
+  digitalWriteFast(A, (y & 0x1) > 0 ? HIGH : LOW);
+  digitalWriteFast(B, (y & 0x2) > 0 ? HIGH : LOW);
+  digitalWriteFast(C, (y & 0x4) > 0 ? HIGH : LOW);
+  digitalWriteFast(D, (y & 0x8) > 0 ? HIGH : LOW);
   __asm__("nop\n\t");
   __asm__("nop\n\t");
   digitalWriteFast(OE, LOW);
-  __asm__("nop\n\t");
-  __asm__("nop\n\t");
-
-
-  for (uint8_t y = 0; y < 16; y++) {
-    digitalWriteFast(LAT, LOW);
-    __asm__("nop\n\t");
-    __asm__("nop\n\t");
-    for (i = 0; i < WIDTH ; i++) {
-      DATAPORT = buffer[c_time][y * WIDTH + i];
-      digitalWriteFast(CLK, HIGH);
-      __asm__("nop\n\t");
-      __asm__("nop\n\t");
-      digitalWriteFast(CLK, LOW);
-    }
-    __asm__("nop\n\t");
-    __asm__("nop\n\t");
-    digitalWriteFast(OE, HIGH);
-    digitalWriteFast(A, (y & 0x1) > 0 ? HIGH : LOW);
-    digitalWriteFast(B, (y & 0x2) > 0 ? HIGH : LOW);
-    digitalWriteFast(C, (y & 0x4) > 0 ? HIGH : LOW);
-    digitalWriteFast(D, (y & 0x8) > 0 ? HIGH : LOW);
-    __asm__("nop\n\t");
-    __asm__("nop\n\t");
-    digitalWriteFast(OE, LOW);
-
-    __asm__("nop\n\t");
-    __asm__("nop\n\t");
-    digitalWriteFast(LAT, HIGH);
-  }
+  digitalWriteFast(LAT, LOW);
 
 #if BENCHMARK == 1
   benchmark_results[benchmark_sampleindex] = micros() - starttime;
@@ -174,18 +178,28 @@ void updatePanel(uint8_t c_time) {
   is_drawing = 0;
 }
 
+
+volatile uint8_t row = 0;
 void bcmtimer() {
   if (is_drawing > 0) {
     return;
   }
+
+  // g_tock: decreased on each interrupt
+  // g_tick: bcm duration doubled each time g_tock is zero
+
   g_tock--;
   if (g_tock <= 0) {
-    g_tick++;
-    if (g_tick > BCM_RESOLUTION - 1) {
-      g_tick = 0;
+    row++;
+    if (row >= HEIGHT / 2) {
+      row = 0;
+      g_tick++;
+      if (g_tick > BCM_RESOLUTION - 1) {
+        g_tick = 0;
+      }
     }
     g_tock = 1 << g_tick;
-    updatePanel(g_tick);
+    updatePanel(g_tick, row);
   }
 }
 
@@ -203,12 +217,21 @@ void benchmark() {
 #endif
 }
 
-
+uint8_t image_drawImage = 0;
 void drawImage() {
+  image_drawImage++;
+  if (image_drawImage > 1) {
+    image_drawImage = 0;
+  }
+
   for (uint8_t y = 0; y < HEIGHT; y++) {
     for (uint8_t x = 0; x < WIDTH; x++)
     {
-      drawPixel(x, y, pgm_read_word_near(gimp_image + 2 * (y * WIDTH + x)));
+      if (image_drawImage == 0) {
+        drawPixel(x, y, pgm_read_word_near(color_image + 2 * (y * WIDTH + x)));
+      } else {
+        drawPixel(x, y, pgm_read_word_near(gimp_image + 2 * (y * WIDTH + x)));
+      }
     }
   }
 }
