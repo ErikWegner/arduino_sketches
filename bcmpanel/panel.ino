@@ -146,26 +146,31 @@ void updatePanel(uint8_t c_time, uint8_t y) {
 #endif
   uint16_t i;
 
-  digitalWriteFast(OE, HIGH);
-  digitalWriteFast(LAT, HIGH);
+  digitalWriteFast(OE, HIGH); // Disable output (all leds go off)
+  digitalWriteFast(LAT, HIGH); // Data is about to be sent
   __asm__("nop\n\t");
   __asm__("nop\n\t");
 
   for (i = 0; i < WIDTH ; i++) {
-    DATAPORT = buffer[c_time][y * WIDTH + i];
+    DATAPORT = buffer[c_time][y * WIDTH + i]; // Data to the pins
     digitalWriteFast(CLK, HIGH);
     __asm__("nop\n\t");
     __asm__("nop\n\t");
     digitalWriteFast(CLK, LOW);
   }
-  digitalWriteFast(A, (y & 0x1) > 0 ? HIGH : LOW);
-  digitalWriteFast(B, (y & 0x2) > 0 ? HIGH : LOW);
-  digitalWriteFast(C, (y & 0x4) > 0 ? HIGH : LOW);
-  digitalWriteFast(D, (y & 0x8) > 0 ? HIGH : LOW);
-  __asm__("nop\n\t");
-  __asm__("nop\n\t");
-  digitalWriteFast(OE, LOW);
-  digitalWriteFast(LAT, LOW);
+
+  // Row address is only set for the first time
+  if (c_time == 0) {
+    digitalWriteFast(A, (y & 0x1) > 0 ? HIGH : LOW);
+    digitalWriteFast(B, (y & 0x2) > 0 ? HIGH : LOW);
+    digitalWriteFast(C, (y & 0x4) > 0 ? HIGH : LOW);
+    digitalWriteFast(D, (y & 0x8) > 0 ? HIGH : LOW);
+    __asm__("nop\n\t");
+    __asm__("nop\n\t");
+  }
+
+  digitalWriteFast(LAT, LOW); // Data from shift register to leds
+  digitalWriteFast(OE, LOW); // Enable output
 
 #if BENCHMARK == 1
   benchmark_results[benchmark_sampleindex] = micros() - starttime;
@@ -229,7 +234,7 @@ void drawImage() {
   }
 
   uint8_t *imgptr = (uint8_t *)color_image;
-  switch(image_drawImage) {
+  switch (image_drawImage) {
     case 1:
       imgptr = (uint8_t *)gimp_image;
       break;
