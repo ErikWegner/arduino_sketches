@@ -25,7 +25,7 @@ void setup() {
   drawPixel555(8, 15, 255, 255, 0);
   drawPixel555(10, 16, 1, 1, 0);
   drawImage();
-  debugBuffer();
+  //debugBuffer();
 }
 
 void loop() {

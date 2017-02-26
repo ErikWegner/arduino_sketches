@@ -37,9 +37,8 @@ void starfield() {
     if (starsOffscreen(star_screenx, star_screeny) || star_z[i] < 0) {
       resetStar(i);
     } else {    
-      matrix.drawPixel(star_screenx, star_screeny, 0xffff);
+      matrix.drawPixel(star_screenx, star_screeny, matrix.Color888(31, 31, 31));
     }
   }
-  
   matrix.swapBuffers(true);
 }
