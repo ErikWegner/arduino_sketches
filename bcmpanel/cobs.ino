@@ -37,29 +37,5 @@ size_t frdecode(String in_data, uint8_t* out_data, uint8_t out_data_size) {
 
   in_data.getBytes(cobs_decoder_buffer1, min(1 + in_data.length(), sizeof(cobs_decoder_buffer1)));
   return cobs_decode(cobs_decoder_buffer1, min(in_data.length(), out_data_size), out_data, 0);
-  
-//  Serial.print(F("frdec "));
-//  Serial.print(in_data.length(), DEC);
-//  Serial.print(F(" a"));
-//  Serial.print(cobs_decoder_buffer1[97], HEX);
-//  Serial.print(F(" b"));
-  size_t l = cobs_decode(cobs_decoder_buffer1, in_data.length(), cobs_decoder_buffer2, 59);
-//  Serial.print(l, DEC);
-//  Serial.print(F(" g"));
-//  Serial.print(min(l, out_data_size), DEC);
-//  Serial.print(F(" c"));
-//  Serial.print(cobs_decoder_buffer2[96], HEX);
-  l = cobs_decode(cobs_decoder_buffer2, min(l, out_data_size), out_data, 0);
-//  Serial.print(F(" d"));
-//  Serial.print(l, DEC);
-//  Serial.print(F(" e"));
-//  Serial.print(out_data_size, DEC);
-//  Serial.print(F(" f"));
-//  Serial.print(out_data[95], HEX);
-//  Serial.print(F(" h"));
-//  Serial.print(in_data.charAt(97), HEX);
-//  Serial.println();
-  
-  return l;
 }
 

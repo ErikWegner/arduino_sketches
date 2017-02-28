@@ -17,7 +17,7 @@ void setup() {
   delay(750);
   setupPanelPins();
   //myTimer.begin(bcmtimer, 100000); // 1/1.000.000 seconds
-  myTimer.begin(bcmtimer, 25); // 1/1.000.000 seconds
+  myTimer.begin(bcmtimer, 27); // 1/1.000.000 seconds
 }
 
 void loop() {
@@ -27,7 +27,7 @@ void loop() {
 void processSerial() {
   if (Serial.available())
   {
-    byte len = Serial.readBytesUntil('\0', serialbuffer, BUFFERSIZE);
+    byte len = Serial.readBytesUntil(0, serialbuffer, BUFFERSIZE);
     if (len > 0) {
       serialbuffer[len] = '\0';
       parserString = String(serialbuffer);
@@ -51,10 +51,6 @@ void processFastRow(String s) {
   uint8_t position = s.indexOf(":");
   uint8_t cmdRow = s.substring(0, position).toInt();
   s = s.substring(position + 1);
-#if DEBUG == 1
-  Serial.print(F("Row "));
-  Serial.println(cmdRow);
-#endif
 
   uint16_t l = s.length();
   if (l != (PANELWIDTH + PANELWIDTH / 2) + 1) {
@@ -64,7 +60,7 @@ void processFastRow(String s) {
 
   uint8_t packedpixels[(PANELWIDTH + PANELWIDTH / 2) + 2];
   
-  size_t decoded_size = frdecode(s, packedpixels, (PANELWIDTH + PANELWIDTH / 2) + 1);
+  size_t decoded_size = frdecode(s, packedpixels, (PANELWIDTH + PANELWIDTH / 2) + 2);
 #if DEBUG == 1
   Serial.print(F("decoded_size "));
   Serial.println(decoded_size, DEC);
