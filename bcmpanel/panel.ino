@@ -14,6 +14,8 @@
 #define WIDTH 64
 #define HEIGHT 32
 
+volatile uint8_t g_tick = 1;
+volatile uint16_t g_tock = 1;
 uint8_t buffer[BCM_RESOLUTION][WIDTH * HEIGHT / 2]; // first dimension: time, second dimension pixel
 volatile uint8_t is_drawing = 0;
 uint8_t intensities[8] = {1, 3, 5, 7, 9, 11, 13, 15}; // max: (1 << BCM_RESOLUTION) - 1
@@ -81,6 +83,28 @@ void drawPixel(uint16_t x, uint16_t y, uint16_t c) {
 }
 
 void drawPixel555(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b) {
+  if ((x < 0) || (x >= WIDTH) || (y < 0) || (y >= HEIGHT)) return;
+  uint8_t addressmask, bcmbit, colorvalue;
+  uint16_t c_pixel = (y >= HEIGHT / 2 ? y - HEIGHT / 2 : y) * WIDTH + x;
+  addressmask = (y >= HEIGHT / 2) ? B11100000 : B00011100;
+
+  for (uint8_t c_time = 0; c_time < BCM_RESOLUTION; c_time++) {
+    bcmbit = (1 << c_time);
+
+    colorvalue = (
+                   // combine all colors for all rows
+                   ((r & bcmbit) > 0 ? B00100100 : B00000000)
+                   | ((g & bcmbit) > 0 ? B01001000 : B00000000)
+                   | ((b & bcmbit) > 0 ? B10010000 : B00000000)
+                 ) & addressmask; // select only relevant bits for the row
+
+    buffer[c_time][c_pixel] =
+      (buffer[c_time][c_pixel] & ~addressmask) // set all relevant bits to zero
+      | colorvalue; // add new color bits;
+  }
+}
+
+void drawPixel444(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b) {
   if ((x < 0) || (x >= WIDTH) || (y < 0) || (y >= HEIGHT)) return;
   uint8_t addressmask, bcmbit, colorvalue;
   uint16_t c_pixel = (y >= HEIGHT / 2 ? y - HEIGHT / 2 : y) * WIDTH + x;
