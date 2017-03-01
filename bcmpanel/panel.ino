@@ -16,6 +16,8 @@
 
 volatile uint8_t g_tick = 1;
 volatile uint16_t g_tock = 1;
+IntervalTimer drawTimer;
+
 uint8_t buffer[BCM_RESOLUTION][WIDTH * HEIGHT / 2]; // first dimension: time, second dimension pixel
 volatile uint8_t is_drawing = 0;
 uint8_t intensities[8] = {1, 3, 5, 7, 9, 11, 13, 15}; // max: (1 << BCM_RESOLUTION) - 1
@@ -154,13 +156,15 @@ void setupPanelPins() {
   DATAPORT = 0;
 
   setupBuffer(0);
+
+  drawTimer.begin(bcmtimer, 28);
 }
 
 /*
    see https://cdn-learn.adafruit.com/downloads/pdf/connecting-a-16x32-rgb-led-matrix-panel-to-a-raspberry-pi.pdf
 */
 void updatePanel(uint8_t c_time, uint8_t y) {
-  is_drawing = 1;
+  //  is_drawing = 1;
 #if DEBUG == 1
   Serial.print(F("Updating panel... "));
   Serial.print(c_time);
@@ -207,15 +211,16 @@ void updatePanel(uint8_t c_time, uint8_t y) {
 #if DEBUG == 1
   Serial.println(F(" done"));
 #endif
-  is_drawing = 0;
+  //  is_drawing = 0;
 }
 
 
 volatile uint8_t row = 0;
+
 void bcmtimer() {
-  if (is_drawing > 0) {
-    return;
-  }
+  /*  if (is_drawing > 0) {
+      return;
+    }*/
 
   // g_tock: decreased on each interrupt
   // g_tick: bcm duration doubled each time g_tock is zero

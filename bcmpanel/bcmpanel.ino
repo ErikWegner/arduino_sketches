@@ -1,5 +1,6 @@
 IntervalTimer myTimer;
 #define PANELWIDTH 64
+#define PANELHEIGHT 32
 #define BUFFERSIZE (8 + PANELWIDTH*32*3/4) // width * height * 3  bytes per pixel / 4 colors per byte + command
 char serialbuffer[BUFFERSIZE + 1];
 String parserString;
@@ -16,12 +17,12 @@ void setup() {
   // put your setup code here, to run once:
   delay(750);
   setupPanelPins();
-  //myTimer.begin(bcmtimer, 100000); // 1/1.000.000 seconds
-  myTimer.begin(bcmtimer, 27); // 1/1.000.000 seconds
+  drawImage();
 }
 
 void loop() {
   processSerial();
+  //  benchmark();
 }
 
 void processSerial() {
@@ -42,7 +43,7 @@ void processSerial() {
 }
 
 void processMatrix(String s) {
-   if (s.substring(0, 2).equalsIgnoreCase(F("FR"))) {
+  if (s.substring(0, 2).equalsIgnoreCase(F("FR"))) {
     processFastRow(s.substring(2));
   }
 }
@@ -59,7 +60,7 @@ void processFastRow(String s) {
   }
 
   uint8_t packedpixels[(PANELWIDTH + PANELWIDTH / 2) + 2];
-  
+
   size_t decoded_size = frdecode(s, packedpixels, (PANELWIDTH + PANELWIDTH / 2) + 2);
 #if DEBUG == 1
   Serial.print(F("decoded_size "));
@@ -70,16 +71,16 @@ void processFastRow(String s) {
   for (uint8_t lc = 0; lc < PANELWIDTH / 2; lc++) {
     // left pixel
     drawPixel444(2 * lc, cmdRow,
-                       packedpixels[3 * lc] >> 4,
-                       packedpixels[3 * lc] & 0xF,
-                       packedpixels[3 * lc + 1] >> 4
-                     );
+                 packedpixels[3 * lc] >> 4,
+                 packedpixels[3 * lc] & 0xF,
+                 packedpixels[3 * lc + 1] >> 4
+                );
     // right pixel
-    drawPixel444(2 * lc + 1, cmdRow, 
-                       packedpixels[3 * lc + 1] & 0xF,
-                       packedpixels[3 * lc + 2] >> 4,
-                       packedpixels[3 * lc + 2] & 0xF
-                     );
+    drawPixel444(2 * lc + 1, cmdRow,
+                 packedpixels[3 * lc + 1] & 0xF,
+                 packedpixels[3 * lc + 2] >> 4,
+                 packedpixels[3 * lc + 2] & 0xF
+                );
 
   }
 }
