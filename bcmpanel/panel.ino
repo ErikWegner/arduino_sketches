@@ -18,8 +18,11 @@ volatile uint8_t g_tick = 1;
 volatile uint16_t g_tock = 1;
 IntervalTimer drawTimer;
 
-uint8_t buffer[BCM_RESOLUTION][WIDTH * HEIGHT / 2]; // first dimension: time, second dimension pixel
-volatile uint8_t is_drawing = 0;
+#define BUFFERSIZE WIDTH * HEIGHT / 2
+uint8_t buffer[2][BCM_RESOLUTION][BUFFERSIZE]; // first dimension: time, second dimension pixel
+volatile uint8_t backbuffer = 1;
+volatile boolean swapflag = false;
+
 uint8_t intensities[8] = {1, 3, 5, 7, 9, 11, 13, 15}; // max: (1 << BCM_RESOLUTION) - 1
 //uint8_t rgbgamma[32] = {
 //  0, 0, 1, 1, 1, 2, 2, 2,
@@ -100,8 +103,8 @@ void drawPixel555(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b) {
                    | ((b & bcmbit) > 0 ? B10010000 : B00000000)
                  ) & addressmask; // select only relevant bits for the row
 
-    buffer[c_time][c_pixel] =
-      (buffer[c_time][c_pixel] & ~addressmask) // set all relevant bits to zero
+    buffer[backbuffer][c_time][c_pixel] =
+      (buffer[backbuffer][c_time][c_pixel] & ~addressmask) // set all relevant bits to zero
       | colorvalue; // add new color bits;
   }
 }
@@ -122,9 +125,23 @@ void drawPixel444(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b) {
                    | ((b & bcmbit) > 0 ? B10010000 : B00000000)
                  ) & addressmask; // select only relevant bits for the row
 
-    buffer[c_time][c_pixel] =
-      (buffer[c_time][c_pixel] & ~addressmask) // set all relevant bits to zero
+    buffer[backbuffer][c_time][c_pixel] =
+      (buffer[backbuffer][c_time][c_pixel] & ~addressmask) // set all relevant bits to zero
       | colorvalue; // add new color bits;
+  }
+}
+
+void swapBuffers(boolean copy) {
+  swapflag = true;                    // Set flag here, then...
+  while (swapflag == true) delayMicroseconds(75); // wait for interrupt to clear it
+  if (copy == true) {
+    memcpy(
+      /* destination */
+      buffer[backbuffer],
+      /* source */
+      buffer[1 - backbuffer],
+      /* size */
+      BUFFERSIZE);
   }
 }
 
@@ -135,9 +152,9 @@ void setupBuffer(uint8_t highpos) {
     for (uint8_t c_time = 0; c_time < BCM_RESOLUTION; c_time++) {
       // is bit set for this pixel's brightness
       if ((intensity & (1 << c_time)) > 0) {
-        buffer[c_time][c_pixel] = B00101000;
+        buffer[backbuffer][c_time][c_pixel] = B00101000;
       } else {
-        buffer[c_time][c_pixel] = 0;
+        buffer[backbuffer][c_time][c_pixel] = 0;
       }
     }
   }
@@ -179,8 +196,10 @@ void updatePanel(uint8_t c_time, uint8_t y) {
   __asm__("nop\n\t");
   __asm__("nop\n\t");
 
+  uint8_t (* buffptr)[BUFFERSIZE];
+  buffptr = buffer[1-backbuffer];
   for (i = 0; i < WIDTH ; i++) {
-    DATAPORT = buffer[c_time][y * WIDTH + i]; // Data to the pins
+    DATAPORT = buffptr[c_time][y * WIDTH + i]; // Data to the pins
     digitalWriteFast(CLK, HIGH);
     __asm__("nop\n\t");
     __asm__("nop\n\t");
@@ -233,6 +252,10 @@ void bcmtimer() {
       row++;
       if (row >= HEIGHT / 2) {
         row = 0;
+        if (swapflag == true) {    // Swap front/back buffers if requested
+          backbuffer = 1 - backbuffer;
+          swapflag = false;
+        }
       }
     }
 
@@ -285,7 +308,7 @@ void drawImage() {
 
 void debugBuffer() {
   for (uint8_t c_time = 0; c_time < BCM_RESOLUTION; c_time++) {
-    Serial.println(buffer[c_time][3 + 16 * WIDTH], BIN);
+    Serial.println(buffer[1-backbuffer][c_time][3 + 16 * WIDTH], BIN);
   }
 }
 

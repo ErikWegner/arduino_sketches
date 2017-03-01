@@ -46,6 +46,10 @@ void processMatrix(String s) {
   if (s.substring(0, 2).equalsIgnoreCase(F("FR"))) {
     processFastRow(s.substring(2));
   }
+  if (s.substring(0, 3).equalsIgnoreCase(F("SWP"))) {
+    swapBuffers(s.substring(3, 4) == "1");
+    return;
+  }
 }
 
 void processFastRow(String s) {
