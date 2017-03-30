@@ -312,3 +312,7 @@ void debugBuffer() {
   }
 }
 
+void clearBuffer() {
+  memset(buffer[backbuffer], 0, BUFFERSIZE);
+}
+

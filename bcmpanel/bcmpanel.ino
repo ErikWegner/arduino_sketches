@@ -5,23 +5,39 @@ IntervalTimer myTimer;
 char serialbuffer[BUFFERSIZE + 1];
 String parserString;
 
+#define MODE_NONE 0
+#define MODE_WAVER 4
+
+uint8_t displayMode = MODE_NONE;
+unsigned long lasttime; /* Keep time for waver */
 
 void benchmark();
 void bcmtimer();
 void updatePanel();
 void setupPanelPins();
 void debugBuffer();
+void clearBuffer();
 void frdecode(uint8_t* in_data, uint8_t* out_data);
 
 void setup() {
   // put your setup code here, to run once:
   delay(750);
   setupPanelPins();
-  drawImage();
+  //drawImage();
+  lasttime = millis();
 }
 
 void loop() {
+  unsigned long time = millis();
   processSerial();
+  if ((displayMode & MODE_WAVER) > 0) {
+    if (time - lasttime > 333) {
+      waverStep();
+      clearBuffer();
+      waverDraw();
+      swapBuffers(false);
+    }
+  }
   //  benchmark();
 }
 
@@ -49,6 +65,19 @@ void processMatrix(String s) {
   if (s.substring(0, 3).equalsIgnoreCase(F("SWP"))) {
     swapBuffers(s.substring(3, 4) == "1");
     return;
+  }
+  if (s.substring(0, 4).equalsIgnoreCase(F("MODE"))) {
+#if DEBUG == 1
+    Serial.println(F("Switching to ") + s.substring(4, 8));
+#endif
+    switchMode(s.substring(4));
+#if DEBUG == 1
+    Serial.println(F("Mode is now ") + String(displayMode, 16));
+#endif
+  }
+
+  if (s.substring(0, 6).equalsIgnoreCase(F("WAVROW"))) {
+    waverAddColumn(s.substring(6));
   }
 }
 
@@ -88,3 +117,28 @@ void processFastRow(String s) {
 
   }
 }
+
+void switchMode(String s) {
+  if (s.equalsIgnoreCase(F("NONE"))) {
+    displayMode = MODE_NONE;
+    return;
+  }
+//  if (s.equalsIgnoreCase(F("FIRE"))) {
+//    displayMode = displayMode ^ MODE_FIRE;
+//    return;
+//  }
+//  if (s.equalsIgnoreCase(F("STAR"))) {
+//    displayMode = displayMode ^ MODE_STARFIELD;
+//    return;
+//  }
+  if (s.equalsIgnoreCase(F("WAVE"))) {
+    displayMode = displayMode ^ MODE_WAVER;
+    return;
+  }
+
+  if (s.equalsIgnoreCase(F("WAVE1"))) {
+    displayMode |= MODE_WAVER;
+    return;
+  }
+}
+

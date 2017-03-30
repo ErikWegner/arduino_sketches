@@ -11,7 +11,7 @@ uint8_t angle_per_column = 256 / waverWavelength;
 #define WAVERANGLEINCREASE 254
 uint8_t waverAngle = 0;
 
-/* Increate the start angle */
+/* Increase the start angle */
 void waverStep() {
   waverAngle = waverAngle + WAVERANGLEINCREASE;
   /* because one turn equals 256 and waverAngle is just one byte of size, just overflow the the variable */
