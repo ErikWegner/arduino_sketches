@@ -41,7 +41,13 @@ void setup()
 
   matrix.begin();
   matrix.setRotation(0);
-
+  for (uint cx = 0; cx < 31; cx++) {
+    for (uint cy = 0; cy < 32; cy++) {
+      matrix.drawPixel(cx, cy, cx * 64);
+    }
+  }
+  matrix.swapBuffers(true);
+  
   Serial.begin(9600);
   delay(1000);
   Serial.println(F("Ready"));
@@ -53,22 +59,29 @@ void setup()
 void loop()
 {
   unsigned long time = millis();
-  processSerial();
-  if ((displayMode & MODE_FIRE) > 0) {
+  /*processSerial();
+    if ((displayMode & MODE_FIRE) > 0) {
     updateFire();
-  }
-  if ((displayMode & MODE_STARFIELD) > 0) {
+    }
+    if ((displayMode & MODE_STARFIELD) > 0) {
     matrix.fillScreen(0);
     starfield();
-  }
-  if ((displayMode & MODE_WAVER) > 0) {
+    }
+    if ((displayMode & MODE_WAVER) > 0) {
     if (time - lasttime > 333) {
       waverStep();
       matrix.fillScreen(0);
       waverDraw();
     }
-  }
-
+    }
+  */
+  
+//  
+//  if (Serial.available() > 0) {
+//    Serial.read();
+//    matrix.updateDisplay();
+//    Serial.println(F("Waiting..."));
+//  }
 }
 
 void processSerial() {
@@ -196,7 +209,7 @@ void processFastRow(String s) {
   }
 
   uint8_t packedpixels[(PANELWIDTH + PANELWIDTH / 2) + 2];
-  
+
   size_t decoded_size = frdecode(s, packedpixels, (PANELWIDTH + PANELWIDTH / 2) + 2);
 #if DEBUG == 1
   Serial.print(F("decoded_size "));

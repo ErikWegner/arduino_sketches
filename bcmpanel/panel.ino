@@ -280,13 +280,13 @@ void benchmark() {
 
 uint8_t image_drawImage = 0;
 void drawImage() {
-  image_drawImage++;
+/*  image_drawImage++;
   if (image_drawImage > 3) {
     image_drawImage = 0;
   }
-
-  uint8_t *imgptr = (uint8_t *)color_image;
-  switch (image_drawImage) {
+*/
+  uint8_t *imgptr = (uint8_t *)poweron_image;
+/*  switch (image_drawImage) {
     case 1:
       imgptr = (uint8_t *)gimp_image;
       break;
@@ -297,7 +297,7 @@ void drawImage() {
       imgptr = (uint8_t *)emblem_image;
       break;
   }
-
+*/
   for (uint8_t y = 0; y < HEIGHT; y++) {
     for (uint8_t x = 0; x < WIDTH; x++)
     {
@@ -313,6 +313,58 @@ void debugBuffer() {
 }
 
 void clearBuffer() {
-  memset(buffer[backbuffer], 0, BUFFERSIZE);
+  memset(buffer[backbuffer], 0, BUFFERSIZE * BCM_RESOLUTION);
+}
+
+
+/* counter from 0 to 14 for each animation frame */
+uint8_t pointstep = 0;
+/* number of pixels to draw within animation frame */
+uint8_t numPoints = 0;
+/* index within `points´ array pointing at first pixel of current frame */
+uint8_t pointIndex = 0;
+
+void step_idle() {
+  /* counter for pixels within current frame */
+  uint8_t pointLoop;
+  /* pointer to pixel data for current pixel */
+  uint8_t* pointsStart;
+  /* temporary variables for erasing old pixels */
+  uint8_t x, y;
+
+//  /* erase points drawn in previous loop */
+//  for (pointLoop = 0; pointLoop < numPoints; pointLoop++) {
+//    /* set pointer to pixel data */
+//    pointsStart = (uint8_t *)points[pointIndex + pointLoop];
+//    /* load coordinates */
+//    x = pointsStart[0];
+//    y = pointsStart[1];
+//    /* load color from poweron_image at (x,y), draw it at (x,y) */
+//    drawPixel(x, y, pgm_read_word_near(poweron_image + 2 * (y * WIDTH + x)));
+//  }
+
+  /* proceed to next animation frame */
+  pointstep += 1;
+
+  /* forward index */
+  pointIndex += numPoints;
+  
+  /* overflow detection */
+  if (pointstep >= 45) {
+    pointstep = 0;
+    pointIndex = 0;
+  }
+
+  /* read the number of points of current frame */
+  numPoints = pointslengths[pointstep];
+
+  /* draw all points */
+  for (pointLoop = 0; pointLoop < numPoints; pointLoop++) {
+    /* set pointer to pixel data */
+    pointsStart = (uint8_t *)points[pointIndex + pointLoop];
+    
+    drawPixel(pointsStart[0], pointsStart[1], (31 - pointsStart[2]/2) << 11);
+  }
+
 }
 

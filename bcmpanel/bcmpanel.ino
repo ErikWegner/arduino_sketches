@@ -6,9 +6,10 @@ char serialbuffer[BUFFERSIZE + 1];
 String parserString;
 
 #define MODE_NONE 0
+#define MODE_IDLE 1
 #define MODE_WAVER 4
 
-uint8_t displayMode = MODE_NONE;
+uint8_t displayMode = MODE_IDLE;
 unsigned long lasttime; /* Keep time for waver */
 
 void benchmark();
@@ -17,13 +18,14 @@ void updatePanel();
 void setupPanelPins();
 void debugBuffer();
 void clearBuffer();
+void step_idle();
 void frdecode(uint8_t* in_data, uint8_t* out_data);
 
 void setup() {
   // put your setup code here, to run once:
   delay(750);
   setupPanelPins();
-  //drawImage();
+  drawImage(); swapBuffers(false);
   lasttime = millis();
 }
 
@@ -31,10 +33,19 @@ void loop() {
   unsigned long time = millis();
   processSerial();
   if ((displayMode & MODE_WAVER) > 0) {
-    if (time - lasttime > 333) {
+    if (time - lasttime > 15) {
+      lasttime = millis();
       waverStep();
       clearBuffer();
       waverDraw();
+      swapBuffers(false);
+    }
+  }
+  if (displayMode == MODE_IDLE) {
+    if (time - lasttime > 33) {
+      lasttime = millis();
+      drawImage();
+      step_idle();
       swapBuffers(false);
     }
   }
@@ -119,6 +130,10 @@ void processFastRow(String s) {
 }
 
 void switchMode(String s) {
+  if (s.equalsIgnoreCase(F("IDLE"))) {
+    displayMode = MODE_IDLE;
+    return;
+  }
   if (s.equalsIgnoreCase(F("NONE"))) {
     displayMode = MODE_NONE;
     return;
