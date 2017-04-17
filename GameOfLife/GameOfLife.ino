@@ -6,10 +6,11 @@ Adafruit_BicolorMatrix matrix = Adafruit_BicolorMatrix();
 
 #define BREITE 8
 #define HOEHE  8
-#define WAYBACK 3
+#define WAYBACK 60
+#define OLD_CHECK_SKIP 7
 
 unsigned char lines[HOEHE];
-unsigned char linesold[3][HOEHE];
+unsigned char linesold[WAYBACK][HOEHE];
 unsigned char linesoldindex = 0;
 unsigned char color = 0;
 unsigned char tasterPin = 7;
@@ -17,7 +18,7 @@ unsigned char tasterClosed = 0;
 
 void setup() {
   pinMode(tasterPin, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(tasterPin), buttonPressed, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(tasterPin), buttonPressed, FALLING);
   matrix.begin(0x70);
   matrix.clear();
   matrix.setRotation(3);
@@ -39,7 +40,7 @@ void loop() {
     randomLines();
     delay(1000);
   }
-  delay(200);
+  delay(175);
 }
 
 
@@ -47,8 +48,8 @@ unsigned char countNeighbours(unsigned char line, unsigned char column) {
   unsigned char neighbours = 0;
   /*
       1 2 3
-    4   5
-    6 7 8
+      4   5
+      6 7 8
   */
   // 1
   if (line > 0 && column > 0) {
@@ -116,9 +117,10 @@ unsigned char updateLines() {
 
 /* Check if any old state equals current state. Return 1 if no match is found */
 char checkOldlines() {
-  unsigned char line, oldie, match;
-  for (oldie = 0; oldie < WAYBACK; oldie++) {
+  unsigned char line, oldie, oldiefc, match;
+  for (oldiefc = 0 /* Skip some frames */; oldiefc < WAYBACK - OLD_CHECK_SKIP; oldiefc++) {
     match = 0;
+    oldie = (linesoldindex + oldiefc) % WAYBACK;
     for (line = 0; line < HOEHE; line++) {
       if (lines[line] == linesold[oldie][line]) {
         match++;
