@@ -1,15 +1,14 @@
-IntervalTimer myTimer;
 #define PANELWIDTH 64
 #define PANELHEIGHT 32
-#define BUFFERSIZE (8 + PANELWIDTH*32*3/4) // width * height * 3  bytes per pixel / 4 colors per byte + command
-char serialbuffer[BUFFERSIZE + 1];
+#define SERIALBUFFERSIZE (8 + PANELWIDTH*32*3/4) // width * height * 3  bytes per pixel / 4 colors per byte + command
+char serialbuffer[SERIALBUFFERSIZE + 1];
 String parserString;
 
 #define MODE_NONE 0
 #define MODE_IDLE 1
 #define MODE_WAVER 4
 
-uint8_t displayMode = MODE_IDLE;
+uint8_t displayMode = MODE_NONE;
 unsigned long lasttime; /* Keep time for waver */
 
 void benchmark();
@@ -49,13 +48,13 @@ void loop() {
       swapBuffers(false);
     }
   }
-  //  benchmark();
+  //benchmark();
 }
 
 void processSerial() {
   if (Serial.available())
   {
-    byte len = Serial.readBytesUntil(0, serialbuffer, BUFFERSIZE);
+    byte len = Serial.readBytesUntil(0, serialbuffer, SERIALBUFFERSIZE);
     if (len > 0) {
       serialbuffer[len] = '\0';
       parserString = String(serialbuffer);

@@ -13,10 +13,11 @@
 #define DATADIR  DDRD
 #define WIDTH 64
 #define HEIGHT 32
+#define NROWS (HEIGHT / 2)
 
-volatile uint8_t g_tick = 1;
-volatile uint16_t g_tock = 1;
 IntervalTimer drawTimer;
+
+volatile uint8_t row = 0, BcmBrightnessBit = BCM_RESOLUTION - 1, duration = 0;
 
 #define BUFFERSIZE WIDTH * HEIGHT / 2
 uint8_t buffer[2][BCM_RESOLUTION][BUFFERSIZE]; // first dimension: time, second dimension pixel
@@ -174,50 +175,72 @@ void setupPanelPins() {
 
   setupBuffer(0);
 
-  drawTimer.begin(bcmtimer, 28);
+  drawTimer.begin(updatePanel, 38);
 }
 
 /*
    see https://cdn-learn.adafruit.com/downloads/pdf/connecting-a-16x32-rgb-led-matrix-panel-to-a-raspberry-pi.pdf
 */
-void updatePanel(uint8_t c_time, uint8_t y) {
-  //  is_drawing = 1;
-#if DEBUG == 1
-  Serial.print(F("Updating panel... "));
-  Serial.print(c_time);
-#endif
+void updatePanel() {
 #if BENCHMARK == 1
   unsigned long starttime = micros();
 #endif
+
   uint16_t i;
 
-  digitalWriteFast(OE, HIGH); // Disable output (all leds go off)
-  digitalWriteFast(LAT, HIGH); // Data is about to be sent
-  __asm__("nop\n\t");
-  __asm__("nop\n\t");
+  
+//  // Early leave if panel needs no refresh
+//  if (duration > 0) {
+//    duration = duration - 1;
+//    return;
+//  }
+  
 
-  uint8_t (* buffptr)[BUFFERSIZE];
-  buffptr = buffer[1-backbuffer];
+  digitalWriteFast(OE, HIGH); // Disable output (all leds go off)
+  digitalWriteFast(LAT, HIGH); // Sent data to output pins
+
+  drawTimer.end();
+  duration = (1 << BcmBrightnessBit) + 1; // How often skip this routine?
+
+  #define CALLOVERHEAD 5   // Actual value measured = 56
+  #define LOOPTIME     70  // Actual value measured = 188
+  uint16_t t = (NROWS > 8) ? LOOPTIME : (LOOPTIME * 2);
+  uint16_t timerDuration = ((t + CALLOVERHEAD * 2) << BcmBrightnessBit) - CALLOVERHEAD;
+  
+  
+  drawTimer.begin(updatePanel, timerDuration);
+  
+  BcmBrightnessBit += 1;
+
+  if (BcmBrightnessBit >= BCM_RESOLUTION) {     // Advance plane counter.  Maxed out?
+    BcmBrightnessBit = 0;                  // Yes, reset to plane 0, and
+    if (++row >= NROWS) {       // advance row counter.  Maxed out?
+      row     = 0;              // Yes, reset row counter, then...
+      if (swapflag == true) {   // Swap front/back buffers if requested
+        backbuffer = 1 - backbuffer;
+        swapflag  = false;
+      }
+    }
+  } else if (BcmBrightnessBit == 1) {
+    digitalWriteFast(A, row & 0x1);
+    digitalWriteFast(B, row & 0x2);
+    digitalWriteFast(C, row & 0x4);
+    digitalWriteFast(D, row & 0x8);
+  }
+
+  digitalWriteFast(OE, LOW); // Enable output
+  digitalWriteFast(LAT, LOW); // Prepare shift registers to receive data
+
+  uint8_t (* buffptr);
+  uint16_t pixelbase = row * WIDTH;
+  buffptr = &(buffer[1 - backbuffer][BcmBrightnessBit][pixelbase]);
   for (i = 0; i < WIDTH ; i++) {
-    DATAPORT = buffptr[c_time][y * WIDTH + i]; // Data to the pins
+    DATAPORT = buffptr[i]; // Data to the pins
     digitalWriteFast(CLK, HIGH);
     __asm__("nop\n\t");
     __asm__("nop\n\t");
     digitalWriteFast(CLK, LOW);
   }
-
-  // Row address is only set for the first time
-  if (c_time == 0) {
-    digitalWriteFast(A, (y & 0x1) > 0 ? HIGH : LOW);
-    digitalWriteFast(B, (y & 0x2) > 0 ? HIGH : LOW);
-    digitalWriteFast(C, (y & 0x4) > 0 ? HIGH : LOW);
-    digitalWriteFast(D, (y & 0x8) > 0 ? HIGH : LOW);
-    __asm__("nop\n\t");
-    __asm__("nop\n\t");
-  }
-
-  digitalWriteFast(LAT, LOW); // Data from shift register to leds
-  digitalWriteFast(OE, LOW); // Enable output
 
 #if BENCHMARK == 1
   benchmark_results[benchmark_sampleindex] = micros() - starttime;
@@ -227,41 +250,6 @@ void updatePanel(uint8_t c_time, uint8_t y) {
     benchmark_output = 1;
   }
 #endif
-#if DEBUG == 1
-  Serial.println(F(" done"));
-#endif
-  //  is_drawing = 0;
-}
-
-
-volatile uint8_t row = 0;
-
-void bcmtimer() {
-  /*  if (is_drawing > 0) {
-      return;
-    }*/
-
-  // g_tock: decreased on each interrupt
-  // g_tick: bcm duration doubled each time g_tock is zero
-
-  g_tock--;
-  if (g_tock <= 0) {
-    g_tick++;
-    if (g_tick > BCM_RESOLUTION - 1) {
-      g_tick = 0;
-      row++;
-      if (row >= HEIGHT / 2) {
-        row = 0;
-        if (swapflag == true) {    // Swap front/back buffers if requested
-          backbuffer = 1 - backbuffer;
-          swapflag = false;
-        }
-      }
-    }
-
-    g_tock = 1 << g_tick;
-    updatePanel(g_tick, row);
-  }
 }
 
 void benchmark() {
@@ -280,24 +268,24 @@ void benchmark() {
 
 uint8_t image_drawImage = 0;
 void drawImage() {
-/*  image_drawImage++;
-  if (image_drawImage > 3) {
-    image_drawImage = 0;
-  }
-*/
-  uint8_t *imgptr = (uint8_t *)poweron_image;
-/*  switch (image_drawImage) {
-    case 1:
-      imgptr = (uint8_t *)gimp_image;
-      break;
-    case 2:
-      imgptr = (uint8_t *)night_image;
-      break;
-    case 3:
-      imgptr = (uint8_t *)emblem_image;
-      break;
-  }
-*/
+  /*  image_drawImage++;
+    if (image_drawImage > 3) {
+      image_drawImage = 0;
+    }
+  */
+  uint8_t *imgptr = (uint8_t *)night_image;
+  /*  switch (image_drawImage) {
+      case 1:
+        imgptr = (uint8_t *)gimp_image;
+        break;
+      case 2:
+        imgptr = (uint8_t *)night_image;
+        break;
+      case 3:
+        imgptr = (uint8_t *)emblem_image;
+        break;
+    }
+  */
   for (uint8_t y = 0; y < HEIGHT; y++) {
     for (uint8_t x = 0; x < WIDTH; x++)
     {
@@ -308,7 +296,7 @@ void drawImage() {
 
 void debugBuffer() {
   for (uint8_t c_time = 0; c_time < BCM_RESOLUTION; c_time++) {
-    Serial.println(buffer[1-backbuffer][c_time][3 + 16 * WIDTH], BIN);
+    Serial.println(buffer[1 - backbuffer][c_time][3 + 16 * WIDTH], BIN);
   }
 }
 
@@ -329,26 +317,24 @@ void step_idle() {
   uint8_t pointLoop;
   /* pointer to pixel data for current pixel */
   uint8_t* pointsStart;
-  /* temporary variables for erasing old pixels */
-  uint8_t x, y;
 
-//  /* erase points drawn in previous loop */
-//  for (pointLoop = 0; pointLoop < numPoints; pointLoop++) {
-//    /* set pointer to pixel data */
-//    pointsStart = (uint8_t *)points[pointIndex + pointLoop];
-//    /* load coordinates */
-//    x = pointsStart[0];
-//    y = pointsStart[1];
-//    /* load color from poweron_image at (x,y), draw it at (x,y) */
-//    drawPixel(x, y, pgm_read_word_near(poweron_image + 2 * (y * WIDTH + x)));
-//  }
+  //  /* erase points drawn in previous loop */
+  //  for (pointLoop = 0; pointLoop < numPoints; pointLoop++) {
+  //    /* set pointer to pixel data */
+  //    pointsStart = (uint8_t *)points[pointIndex + pointLoop];
+  //    /* load coordinates */
+  //    x = pointsStart[0];
+  //    y = pointsStart[1];
+  //    /* load color from poweron_image at (x,y), draw it at (x,y) */
+  //    drawPixel(x, y, pgm_read_word_near(poweron_image + 2 * (y * WIDTH + x)));
+  //  }
 
   /* proceed to next animation frame */
   pointstep += 1;
 
   /* forward index */
   pointIndex += numPoints;
-  
+
   /* overflow detection */
   if (pointstep >= 45) {
     pointstep = 0;
@@ -362,8 +348,8 @@ void step_idle() {
   for (pointLoop = 0; pointLoop < numPoints; pointLoop++) {
     /* set pointer to pixel data */
     pointsStart = (uint8_t *)points[pointIndex + pointLoop];
-    
-    drawPixel(pointsStart[0], pointsStart[1], (31 - pointsStart[2]/2) << 11);
+
+    drawPixel(pointsStart[0], pointsStart[1], (31 - pointsStart[2] / 2) << 11);
   }
 
 }
