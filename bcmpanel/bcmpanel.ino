@@ -48,7 +48,7 @@ void loop() {
       swapBuffers(false);
     }
   }
-  //benchmark();
+  benchmark();
 }
 
 void processSerial() {

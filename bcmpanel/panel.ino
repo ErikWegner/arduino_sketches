@@ -1,5 +1,5 @@
 #define DEBUG 0
-#define BENCHMARK 0
+#define BENCHMARK 1
 
 #define BCM_RESOLUTION 4
 #define CLK 19
@@ -175,7 +175,7 @@ void setupPanelPins() {
 
   setupBuffer(0);
 
-  drawTimer.begin(updatePanel, 38);
+  drawTimer.begin(updatePanel, 25);
 }
 
 /*
@@ -202,12 +202,11 @@ void updatePanel() {
   drawTimer.end();
   duration = (1 << BcmBrightnessBit) + 1; // How often skip this routine?
 
-  #define CALLOVERHEAD 5   // Actual value measured = 56
-  #define LOOPTIME     70  // Actual value measured = 188
+  #define CALLOVERHEAD 0   // Actual value measured = 56
+  #define LOOPTIME     23  // Actual value measured = 188
   uint16_t t = (NROWS > 8) ? LOOPTIME : (LOOPTIME * 2);
   uint16_t timerDuration = ((t + CALLOVERHEAD * 2) << BcmBrightnessBit) - CALLOVERHEAD;
-  
-  
+
   drawTimer.begin(updatePanel, timerDuration);
   
   BcmBrightnessBit += 1;
@@ -234,11 +233,19 @@ void updatePanel() {
   uint8_t (* buffptr);
   uint16_t pixelbase = row * WIDTH;
   buffptr = &(buffer[1 - backbuffer][BcmBrightnessBit][pixelbase]);
+  uint8_t a = buffptr[0];
   for (i = 0; i < WIDTH ; i++) {
-    DATAPORT = buffptr[i]; // Data to the pins
+    // set the data pins
+    digitalWriteFast(2, a & (1 << 2)); // R0
+    digitalWriteFast(3, a & (1 << 3)); // G0
+    digitalWriteFast(4, a & (1 << 4)); // B0
+    digitalWriteFast(5, a & (1 << 5)); // R1
+    digitalWriteFast(6, a & (1 << 6)); // G1
+    digitalWriteFast(7, a & (1 << 7)); // B1
+
     digitalWriteFast(CLK, HIGH);
-    __asm__("nop\n\t");
-    __asm__("nop\n\t");
+    // load data in between clock toggle to better fit the 25 MHz
+    a = buffptr[i+1];
     digitalWriteFast(CLK, LOW);
   }
 
