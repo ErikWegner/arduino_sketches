@@ -175,7 +175,7 @@ void setupPanelPins() {
 
   setupBuffer(0);
 
-  drawTimer.begin(updatePanel, 25);
+  drawTimer.begin(updatePanel, 500000);
 }
 
 /*
@@ -188,13 +188,13 @@ void updatePanel() {
 
   uint16_t i;
 
-  
-//  // Early leave if panel needs no refresh
-//  if (duration > 0) {
-//    duration = duration - 1;
-//    return;
-//  }
-  
+
+  //  // Early leave if panel needs no refresh
+  //  if (duration > 0) {
+  //    duration = duration - 1;
+  //    return;
+  //  }
+
 
   digitalWriteFast(OE, HIGH); // Disable output (all leds go off)
   digitalWriteFast(LAT, HIGH); // Sent data to output pins
@@ -202,13 +202,13 @@ void updatePanel() {
   drawTimer.end();
   duration = (1 << BcmBrightnessBit) + 1; // How often skip this routine?
 
-  #define CALLOVERHEAD 0   // Actual value measured = 56
-  #define LOOPTIME     23  // Actual value measured = 188
+#define CALLOVERHEAD 5
+#define LOOPTIME     25
   uint16_t t = (NROWS > 8) ? LOOPTIME : (LOOPTIME * 2);
   uint16_t timerDuration = ((t + CALLOVERHEAD * 2) << BcmBrightnessBit) - CALLOVERHEAD;
 
   drawTimer.begin(updatePanel, timerDuration);
-  
+
   BcmBrightnessBit += 1;
 
   if (BcmBrightnessBit >= BCM_RESOLUTION) {     // Advance plane counter.  Maxed out?
@@ -244,8 +244,8 @@ void updatePanel() {
     digitalWriteFast(7, a & (1 << 7)); // B1
 
     digitalWriteFast(CLK, HIGH);
-    // load data in between clock toggle to better fit the 25 MHz
-    a = buffptr[i+1];
+    // load data in between clock toggle to better fit 25 MHz panel timing
+    a = buffptr[i + 1];
     digitalWriteFast(CLK, LOW);
   }
 

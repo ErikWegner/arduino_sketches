@@ -22,10 +22,12 @@ void frdecode(uint8_t* in_data, uint8_t* out_data);
 
 void setup() {
   // put your setup code here, to run once:
+  Serial.begin(9600);
   delay(750);
   setupPanelPins();
   drawImage(); swapBuffers(false);
   lasttime = millis();
+  Serial.println("Start");
 }
 
 void loop() {
@@ -48,7 +50,7 @@ void loop() {
       swapBuffers(false);
     }
   }
-  benchmark();
+  //benchmark();
 }
 
 void processSerial() {
@@ -137,14 +139,14 @@ void switchMode(String s) {
     displayMode = MODE_NONE;
     return;
   }
-//  if (s.equalsIgnoreCase(F("FIRE"))) {
-//    displayMode = displayMode ^ MODE_FIRE;
-//    return;
-//  }
-//  if (s.equalsIgnoreCase(F("STAR"))) {
-//    displayMode = displayMode ^ MODE_STARFIELD;
-//    return;
-//  }
+  //  if (s.equalsIgnoreCase(F("FIRE"))) {
+  //    displayMode = displayMode ^ MODE_FIRE;
+  //    return;
+  //  }
+  //  if (s.equalsIgnoreCase(F("STAR"))) {
+  //    displayMode = displayMode ^ MODE_STARFIELD;
+  //    return;
+  //  }
   if (s.equalsIgnoreCase(F("WAVE"))) {
     displayMode = displayMode ^ MODE_WAVER;
     return;
