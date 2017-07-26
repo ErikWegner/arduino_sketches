@@ -31,8 +31,18 @@ void panel_setup() {
 }
 
 void panel_showBootimg() {
+  prog_char btext[] PROGMEM = "Booting";
+  backgroundLayer.fillScreen({0, 0, 0});
   backgroundLayer.setFont(font5x7);
-  backgroundLayer.drawString(0, 0, {0, 0xff, 0}, "Booting");
+  backgroundLayer.drawString(0, 0, {0, 0xff, 0}, btext);
   backgroundLayer.swapBuffers();
+}
+
+void panel_showError(const char text[]) {
+  backgroundLayer.fillScreen({0, 0, 0});
+  backgroundLayer.setFont(font5x7);
+  backgroundLayer.drawString(0, 0, {0xff, 0, 0}, text);
+  backgroundLayer.swapBuffers();
+  
 }
 
