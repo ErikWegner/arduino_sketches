@@ -1,8 +1,8 @@
 #include <SmartMatrix3.h>
 
 #define COLOR_DEPTH 24                  // known working: 24, 48 - If the sketch uses type `rgb24` directly, COLOR_DEPTH must be 24
-const uint8_t kMatrixWidth = 64;        // known working: 32, 64, 96, 128
-const uint8_t kMatrixHeight = 32;       // known working: 16, 32, 48, 64
+const uint8_t kMatrixWidth = MATRIX_WIDTH;   // known working: 32, 64, 96, 128
+const uint8_t kMatrixHeight = MATRIX_HEIGHT; // known working: 16, 32, 48, 64
 const uint8_t kRefreshDepth = 36;       // known working: 24, 36, 48
 const uint8_t kDmaBufferRows = 4;       // known working: 2-4, use 2 to save memory, more to keep from dropping frames and automatically lowering refresh rate
 const uint8_t kPanelType = SMARTMATRIX_HUB75_32ROW_MOD16SCAN;   // use SMARTMATRIX_HUB75_16ROW_MOD8SCAN for common 16x32 panels
@@ -14,7 +14,7 @@ const uint8_t kIndexedLayerOptions = (SM_INDEXED_OPTIONS_NONE);
 SMARTMATRIX_ALLOCATE_BUFFERS(matrix, kMatrixWidth, kMatrixHeight, kRefreshDepth, kDmaBufferRows, kPanelType, kMatrixOptions);
 SMARTMATRIX_ALLOCATE_BACKGROUND_LAYER(backgroundLayer, kMatrixWidth, kMatrixHeight, COLOR_DEPTH, kBackgroundLayerOptions);
 
-const int defaultBrightness = 100*(255/100);    // full brightness
+const int defaultBrightness = 100 * (255 / 100); // full brightness
 //const int defaultBrightness = 15*(255/100);    // dim: 15% brightness
 
 // Teensy 3.0 has the LED on pin 13
@@ -30,7 +30,7 @@ void panel_setup() {
   matrix.setBrightness(defaultBrightness);
 }
 
-void panel_showBootimg() {
+void panel_showBootText() {
   prog_char btext[] PROGMEM = "Booting";
   backgroundLayer.fillScreen({0, 0, 0});
   backgroundLayer.setFont(font5x7);
@@ -43,6 +43,20 @@ void panel_showError(const char text[]) {
   backgroundLayer.setFont(font5x7);
   backgroundLayer.drawString(0, 0, {0xff, 0, 0}, text);
   backgroundLayer.swapBuffers();
-  
+
+}
+
+void panel_showImage(uint8_t buf[], uint8_t bytes_per_pixel) {
+  rgb24 color;
+  for (uint8_t y = 0; y < MATRIX_HEIGHT; y++) {
+    for (uint8_t x = 0; x < MATRIX_WIDTH; x++) {
+      color.red = buf[0];
+      color.green = buf[1];
+      color.blue = buf[2];
+      backgroundLayer.drawPixel(x, y, color);
+      buf += bytes_per_pixel;
+    }
+  }
+  backgroundLayer.swapBuffers();
 }
 
