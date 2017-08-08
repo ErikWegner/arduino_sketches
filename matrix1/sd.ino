@@ -26,8 +26,10 @@ int sd_init() {
 }
 
 
-int sd_loadBootImage(uint8_t buf[], size_t buffer_length) {
-  if (!file.open("boot.pic", O_READ)) {
+int sd_loadImage(uint8_t buf[], size_t buffer_length, String filename) {
+  char filename2[64];
+  filename.toCharArray(filename2, 64);
+  if (!file.open(filename2, O_READ)) {
     error(ERROR_SD_BootImageNotFound);
     return -1;
   }
