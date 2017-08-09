@@ -10,14 +10,21 @@ bool bootanimRunning = true;
 
 /* Intermediate function to walk through the bootanim array */
 inline void scriptprocessor_executeNextStatement() {
+  String statement = 0;
   if (bootanimRunning == false) {
-    return;
+    statement = sd_loadNextLine();
+    if (!statement) {
+      return;
+    }
+  } else {
+    statement = bootanim[bootanimindex];
+    bootanimindex++;
   }
 
-  String statement = bootanim[bootanimindex];
-  scriptprocessor_execute(statement);
-  bootanimindex++;
-
+  if (statement.length() > 1) {
+    scriptprocessor_execute(statement);
+  }
+  
   delay(animation_delay);
 }
 
@@ -33,6 +40,9 @@ void scriptprocessor_execute(String statement) {
   if (command == "SHOW") {
     loadAndShowImageFromSd(statement.substring(splitIndex + 1));
     return;
+  }
+  if (command == "SCRIPT") {
+    loadScriptFromSd(statement.substring(splitIndex + 1));
   }
   if (command == "QUIT") {
     bootanimRunning = false;
