@@ -44,7 +44,7 @@ int sd_loadImage(uint8_t buf[], size_t buffer_length, String filename) {
   return 0;
 }
 
-void loadScriptFromSd(String filename) {
+bool loadScriptFromSd(String filename) {
 #if DEBUG == 1
   Serial.print("loadScriptFromSd(\"");
   Serial.print(filename);
@@ -55,21 +55,33 @@ void loadScriptFromSd(String filename) {
   filename.toCharArray(filename2, 64);
   if (scriptfile.open(filename2)) {
     scriptfileOpen = true;
+#if DEBUG == 1
+    Serial.println("success");
+#endif
+    return true;
   }
+
+  return false;
 }
 
 String sd_loadNextLine() {
   if (scriptfileOpen) {
     const uint8_t linelength = 255;
-    char linefeed = '\n';
-    char line[linelength + 1];
-    uint16_t bytescount = scriptfile.fgets(line, linelength, &linefeed);
+    char line[linelength];
+    uint16_t bytescount = scriptfile.fgets(line, linelength);
     if (bytescount > 0) {
-      return String(line);
+      return String(line).trim();
     }
   }
 
   return 0;
 }
 
+uint32_t sd_scriptFilePosition() {
+  return scriptfile.curPosition();
+}
+
+void sd_scriptFileSeekPosition(uint32_t p) {
+  scriptfile.seekSet(p);
+}
 
