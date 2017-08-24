@@ -77,12 +77,15 @@ void sleep_command(String duration) {
   // If a unit was found...
   if (unitposition > 0) {
     // Split number and unit
-    uint8_t duration_time = duration.substring(0, unitposition).toInt();
+    uint16_t duration_time = duration.substring(0, unitposition).toInt();
     String duration_unit = duration.substring(unitposition);
 
     // Execute delay
     if (duration_unit == "s") {
       delay(1000 * duration_time);
+    }
+    if (duration_unit == "ms") {
+      delay(duration_time);
     }
   }
 }
