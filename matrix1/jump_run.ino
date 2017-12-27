@@ -2,7 +2,8 @@
 
 #define JR_HUMP_COUNT 3
 #define JR_HUMP_WIDTH 5
-#define JR_JUMP_PIXELS 5
+#define JR_HUMP_SPEEDSCALE 3
+#define JR_HUMP_PIXELS 5
 #define JR_AVATAR_RUNNING_FRAMES 2
 #define JR_AVATAR_RUNNING_WIDTH 7
 #define JR_AVATAR_RUNNING_HEIGHT 18
@@ -71,14 +72,14 @@ uint8_t avatar_running[JR_AVATAR_RUNNING_FRAMES][JR_AVATAR_RUNNING_WIDTH * JR_AV
 /* Variables */
 
 // each pixel is a y-offset
-uint8_t jr_hump_pixels[JR_JUMP_PIXELS * 2] PROGMEM = { 1,  0,  0,  1,  1};
+uint8_t jr_hump_pixels[JR_HUMP_PIXELS * 2] PROGMEM = { 1,  0,  0,  1,  1};
 // line of each hump
-uint8_t jr_hump_rows[JR_JUMP_PIXELS] = { 20, 24, 30};
+uint8_t jr_hump_rows[JR_HUMP_PIXELS] = { 20, 24, 30};
 
 volatile uint8_t jr_run = 0;
 
-// horizontal position for humps
-int8_t jr_humps_x[JR_HUMP_COUNT] = { 12, 36, 41};
+// horizontal position for humps (multiplied with 4)
+int16_t jr_humps_x[JR_HUMP_COUNT] = { 12, 36, 41};
 
 // decremented on each tick, move humps when reached zero
 uint8_t jr_hump_move_delay = 0;
@@ -119,9 +120,9 @@ void jr_drawScene() {
 
   // draw humps
   for (c1 = 0; c1 < JR_HUMP_COUNT; c1++) {
-    hump_x = jr_humps_x[c1];
+    hump_x = jr_humps_x[c1] / JR_HUMP_SPEEDSCALE;
     hump_y = jr_hump_rows[c1];
-    for (c2 = 0; c2 < JR_JUMP_PIXELS; c2++) {
+    for (c2 = 0; c2 < JR_HUMP_PIXELS; c2++) {
       backgroundLayer.drawPixel(hump_x + c2, hump_y + jr_hump_pixels[c2], {139, 255, 155});
     }
   }
@@ -159,9 +160,9 @@ void jr_move_humps() {
   jr_hump_move_delay = jr_hump_move_delay_init;
   for (uint8_t humpcounter = 0; humpcounter < JR_HUMP_COUNT; humpcounter++) {
     jr_humps_x[humpcounter] = jr_humps_x[humpcounter] - humpcounter - 1;
-    if (jr_humps_x[humpcounter] < -JR_HUMP_WIDTH) {
+    if (jr_humps_x[humpcounter] < -JR_HUMP_WIDTH * JR_HUMP_SPEEDSCALE) {
       // hump has moved left out of visible area
-      jr_humps_x[humpcounter] = MATRIX_WIDTH + JR_HUMP_WIDTH + random(20);
+      jr_humps_x[humpcounter] = (MATRIX_WIDTH + JR_HUMP_WIDTH + random(20)) * JR_HUMP_SPEEDSCALE;
     }
   }
 }

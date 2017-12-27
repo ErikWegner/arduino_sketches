@@ -7,8 +7,6 @@
    SPI 1.0
 */
 
-#include <FlexiTimer2.h>
-
 #define MATRIX_WIDTH 64
 #define MATRIX_HEIGHT 32
 #define DEBUG 1
@@ -51,10 +49,6 @@ void setup() {
 #endif
 
   delay(500);
-
-  /* Jump and run */
-  //FlexiTimer2::set(5, jump_and_run_tick_enabled);
-  //FlexiTimer2::start();
 }
 
 void loop() {
