@@ -45,7 +45,7 @@ void loop() {
      steps_left = full_steps_count;
      direction  = (direction > 0 ? -1 : 1);
 
-     delay(500);
+     delay(1500);
 }
 
 void move_stepper(int step_count) {
