@@ -1,171 +1,115 @@
-function clr( )
-   uart.write (1, string.char(254) .. string.char(128) .. "                                " .. string.char(254) .. string.char(128))
-end
-
-statustext = ""
-statusclear = 0
-statuswifi = " "
-statusmqtt = " "
-weightvalue = 0.0
-lastweightvalue = 0.0
-lastweightcounter = 0
-deepsleepdelaystartvalue = 20
-deepsleepdelay = deepsleepdelaystartvalue
-MQTT_CLIENTID = nil
 MQTT_HOST = nil
 MQTT_PORT = nil
-MQTT_USER = nil
-MQTT_PASSWORD = nil
+mqtt_connector = nil
+mqtt_client = nil
+mqtt_status = " "
+mqtt_delay = 0
+send_status = " "
+send_reset_delay = 0
 
-function weight(value)
-    weightvalue = value or 0.0
-    refreshDisplay()
+config_loaded = false
+wifi_counter = 0
+
+base = -225603
+scale = 21.49584
+lastweightvalue = 0.0
+lastweightcounter = 0
+
+function start()
+    uart.setup(1, 9600, 8, uart.PARITY_NONE, uart.STOPBITS_1)
+    uart.write(1, string.char(254) .. string.char(1) .. 'Start')
+    if file.exists("device.config.lua") then
+        dofile("device.config.lua")
+        hx711.init(5,6)
+        mqtt_connector = mqtt.Client(MQTT_CLIENTID, 120, MQTT_USER, MQTT_PASSWORD)
+        mqtt_connector:on("offline", function(client)
+            mqtt_client = nil
+            mqtt_status = "O"
+            mqtt_delay = 5
+        end)
+        uart.write(1, string.char(254) .. string.char(1) .. 'Geladen')
+        station_cfg={}
+        station_cfg.ssid = WIFI_SSID
+        station_cfg.pwd = WIFI_PASSWORD
+        wifi.setmode(wifi.STATION)
+        wifi.sta.config(station_cfg)
+        wifi.sta.connect()
+        config_loaded = true
+    else
+        uart.write(1, string.char(254) .. string.char(1) .. 'Konfiguration fehlerhaft')
+    end
+end
+
+function loopfunc()
+    if not config_loaded then return end
+    local wifi_status
+    if wifi.sta.getip ( ) == nil then
+    wifi_status = (wifi_counter % 2 == 0) and "W . " or "W : "
+        wifi_counter = wifi_counter + 1
+    else
+        wifi_status = "W ^ "
+        if mqtt_delay > 0 then
+            mqtt_delay = mqtt_delay - 1
+            if mqtt_delay == 0 then
+                mqtt_status = " "
+            end
+        end
+        if mqtt_status == " " then
+            mqtt_status = "-"
+            mqtt_connector:connect(MQTT_HOST, MQTT_PORT, 1,
+            function(client)
+                mqtt_status = "C"
+                mqtt_client = client
+            end,
+            function(client, reason)
+                mqtt_client = nil
+                mqtt_status = reason
+                mqtt_delay = 5
+            end)
+        end
+    end
+
+    local raw_data = hx711.read(0)
+    local weightvalue = math.floor((raw_data - base) / scale / 100)/10
+    if weightvalue < 0 then
+        weightvalue = 0.0
+    end
+    
     if lastweightvalue > (weightvalue - 0.2) and lastweightvalue < (weightvalue + 0.2) then
-        lastweightcounter = lastweightcounter + 1
+        if lastweightcounter < 5 and lastweightvalue > 0 then
+            lastweightcounter = lastweightcounter + 1
+        end
     else
         lastweightcounter = 0
         lastweightvalue = weightvalue
     end
-    if lastweightcounter == 5 then
-        send_weight(weightvalue)
-    end
-end
 
-function status(text)
-    statusclear = 4
-    statustext = text
-    refreshDisplay()
-end
-
-function refreshDisplay()
-    if statusclear > 0 then
-        statusclear = statusclear - 1
-    end
-    if statusclear == 1 then
-        statustext = ""
-    end
-    -- Clear and write status text
-    uart.write (1, string.char(254) .. string.char(1) .. statustext)
-    -- Go to line 2
-    uart.write(1, string.char(254) .. string.char(0xc0)  .. string.format("%5.1f", weightvalue) .. " kg   " .. statuswifi .. " " .. statusmqtt)
-end
-
-function check_sleep(value)
-    if value > 0.0 then
-        deepsleepdelay = deepsleepdelaystartvalue
-        return
-    end
-
-    deepsleepdelay = deepsleepdelay - 1
-    status("Aus in " .. tostring(deepsleepdelay))
-    if deepsleepdelay < 1 then
-        status("Ausschalten")
-        --node.dsleep(0, 4)
-    end
-end
-
-function read_config()
-    if file.exists("device.config.lua") then
-        status("Lade Konfiguration ...")
-        dofile("device.config.lua")
-        start_scale()
-        start_wifi(WIFI_SSID, WIFI_PASSWORD)
-    else
-        status("Keine Konfiguration")
-    end
-end
-
-function start_scale()
-    hx711.init(5,6)
-    raw_data = hx711.read(0)
-    base = -225603
-    scale = 21.49584
-
-    tmr.alarm(2, 1000, tmr.ALARM_AUTO, function () 
-        raw_data = hx711.read(0)
-        value = math.floor((raw_data - base) / scale / 100)/10
-        if value < 0 then
-            value = 0.0
-        end
-        weight(value)
-        check_sleep(value)
-    end)
-end
-
-function wifi_connected()
-    statuswifi = "T"
-end
-
-function wait_for_wifi_conn ( )
-   local waits = 1;
-   tmr.alarm (1, 1000, tmr.ALARM_AUTO, function ( )
-      if wifi.sta.getip ( ) == nil then
-         statuswifi = (waits % 2 == 0) and "." or ":"
-         waits = waits + 1
-      else
-         --tmr.unregister (1)
-         wifi_connected()
-      end
-   end)
-end
-
-function start_wifi(ssid, wifipwd)
-    status("Verbinde " .. ssid)
-    station_cfg={}
-    station_cfg.ssid = ssid
-    station_cfg.pwd = wifipwd
-    wifi.setmode(wifi.STATION)
-    wifi.sta.config(station_cfg)
-    wifi.sta.connect()
-    wait_for_wifi_conn()
-end
-
-function send_weight(value)
-    if statuswifi == "T" then
-        send_weight_retry(value, 3)
-    end    
-end
-
-function send_weight_retry(value, send_retries)
-    --dofile("device.config.lua")
-    statusmqtt = "."
-    status("Wird verbunden")
-    
-    m = mqtt.Client(MQTT_CLIENTID, 120, MQTT_USER, MQTT_PASSWORD)    
-    m:connect(MQTT_HOST, MQTT_PORT, 1,
-        -- connected
-        function(client)
-            statusmqtt = "S"
-            status("Wird gesendet")
-            -- publish a message with data = hello, QoS = 0, retain = 0
-            client:publish(
-                "/iot/scale", tostring(weightvalue), 0, 0,
+    if lastweightcounter >= 5 and send_reset_delay == 0 then
+        if mqtt_client == nil then
+            send_status = "?"
+        else
+            mqtt_client:publish(
+                "/iot/scale", 
+                tostring(weightvalue), 0, 0,
                 function(client)
-                    status("Gesendet")
-                    tmr.alarm(5, 1500, tmr.ALARM_SINGLE, function()
-                        statusmqtt = " "
-                        status("")
-                    end)
-
-                    client:close();
+                    send_status = "+"
+                    send_reset_delay = 10
                 end)
-        end,
-        -- connection error
-        function(client, reason)
-            statusmqtt = "E"
-            status(reason)
-            client:close();
-            
-            -- try again?
-            if send_retries > 0 then
-                send_weight_retry(value, send_retries - 1)
-            end
-        end)
+       end
+    end
 
+    if send_reset_delay > 0 then
+        send_reset_delay = send_reset_delay - 1
+        if send_reset_delay == 0 then
+            send_status = " "
+        end
+    end
+    
+    uart.write(1, string.char(254) .. string.char(0x01) .. wifi_status .. 
+     string.format("%6.1f", weightvalue) .. " kg   " .. mqtt_status .. " " .. send_status .. " " .. tostring(lastweightcounter))
 end
 
-tmr.alarm(5, 250, tmr.ALARM_SINGLE, function()
-    uart.setup(1, 9600, 8, uart.PARITY_NONE, uart.STOPBITS_1)
-    status("Start")
-    read_config()
-end)
+if tmr.create():alarm(250, tmr.ALARM_SINGLE, start)
+then
+    tmr.create():alarm(1000, tmr.ALARM_AUTO, loopfunc)
+end
