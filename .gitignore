@@ -1,1 +1,1 @@
-nodemcu/*/device.config.lua
+nodemcu/*/device.config*.lua
