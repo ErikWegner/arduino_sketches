@@ -1,4 +1,7 @@
 WIFI_SSID = "SSID"
 WIFI_PASSWORD = "p4ssworD"
-API_URL = "https://www.example.org/api"
-API_TOKEN = "1234567890"
+MQTT_HOST = "mqtt.example.com"
+MQTT_PORT = 8883
+MQTT_USER = "mqttuser"
+MQTT_PASSWORD = "mqttp4ssworD"
+MQTT_CLIENTID = "iot_scale"

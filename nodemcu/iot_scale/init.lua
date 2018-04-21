@@ -1,5 +1,9 @@
-API_URL = nil
-API_TOKEN = nil
+MQTT_HOST = nil
+MQTT_PORT = nil
+mqtt_connector = nil
+mqtt_client = nil
+mqtt_status = " "
+mqtt_delay = 0
 send_status = " "
 send_reset_delay = 0
 
@@ -17,6 +21,12 @@ function start()
     if file.exists("device.config.lua") then
         dofile("device.config.lua")
         hx711.init(5,6)
+        mqtt_connector = mqtt.Client(MQTT_CLIENTID, 120, MQTT_USER, MQTT_PASSWORD)
+        mqtt_connector:on("offline", function(client)
+            mqtt_client = nil
+            mqtt_status = "O"
+            mqtt_delay = 5
+        end)
         uart.write(1, string.char(254) .. string.char(1) .. 'Geladen')
         station_cfg={}
         station_cfg.ssid = WIFI_SSID
@@ -38,6 +48,25 @@ function loopfunc()
         wifi_counter = wifi_counter + 1
     else
         wifi_status = "W ^ "
+        if mqtt_delay > 0 then
+            mqtt_delay = mqtt_delay - 1
+            if mqtt_delay == 0 then
+                mqtt_status = " "
+            end
+        end
+        if mqtt_status == " " then
+            mqtt_status = "-"
+            mqtt_connector:connect(MQTT_HOST, MQTT_PORT, 1,
+            function(client)
+                mqtt_status = "C"
+                mqtt_client = client
+            end,
+            function(client, reason)
+                mqtt_client = nil
+                mqtt_status = reason
+                mqtt_delay = 5
+            end)
+        end
     end
 
     local raw_data = hx711.read(0)
@@ -55,25 +84,18 @@ function loopfunc()
         lastweightvalue = weightvalue
     end
 
-    if lastweightcounter >= 5 and send_reset_delay == 0 and send_status == " " then
-        if wifi_status == "W ^ " then
+    if lastweightcounter >= 5 and send_reset_delay == 0 then
+        if mqtt_client == nil then
             send_status = "?"
-            http.post(
-                API_URL,
-                'Content-Type: application/json\r\nAuthorization: Token ' .. API_TOKEN .. '\r\n',
-                '{"value":' .. tostring(weightvalue) .. '}',
-                function(code, data)
-                    if (code < 0) then
-                        send_status = "E"
-                        print("HTTP request failed")
-                        print(data)
-                    else
-                        send_status = "+"
-                        send_reset_delay = 10
-                    end
-                end
-            )
-        end
+        else
+            mqtt_client:publish(
+                "/iot/scale", 
+                tostring(weightvalue), 0, 0,
+                function(client)
+                    send_status = "+"
+                    send_reset_delay = 10
+                end)
+       end
     end
 
     if send_reset_delay > 0 then
@@ -84,7 +106,7 @@ function loopfunc()
     end
     
     uart.write(1, string.char(254) .. string.char(0x01) .. wifi_status .. 
-     string.format("%6.1f", weightvalue) .. " kg   " .. " " .. send_status .. " " .. tostring(lastweightcounter))
+     string.format("%6.1f", weightvalue) .. " kg   " .. mqtt_status .. " " .. send_status .. " " .. tostring(lastweightcounter))
 end
 
 if tmr.create():alarm(250, tmr.ALARM_SINGLE, start)
