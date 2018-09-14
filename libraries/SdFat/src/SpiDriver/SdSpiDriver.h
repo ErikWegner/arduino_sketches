@@ -1,21 +1,26 @@
-/* SdFat Library
- * Copyright (C) 2016 by William Greiman
+/**
+ * Copyright (c) 2011-2018 Bill Greiman
+ * This file is part of the SdFat library for SD memory cards.
  *
- * This file is part of the FatLib Library
+ * MIT License
  *
- * This Library is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
  *
- * This Library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
- * You should have received a copy of the GNU General Public License
- * along with the FatLib Library.  If not, see
- * <http://www.gnu.org/licenses/>.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
  */
 /**
  * \file
@@ -27,6 +32,11 @@
 #include "SPI.h"
 #include "SdSpiBaseDriver.h"
 #include "SdFatConfig.h"
+//-----------------------------------------------------------------------------
+/** SDCARD_SPI is defined if board has built-in SD card socket */
+#ifndef SDCARD_SPI
+#define SDCARD_SPI SPI
+#endif  // SDCARD_SPI
 //-----------------------------------------------------------------------------
 /**
  * \class SdSpiLibDriver
@@ -40,11 +50,11 @@ class SdSpiLibDriver {
  public:
   /** Activate SPI hardware. */
   void activate() {
-    SPI.beginTransaction(m_spiSettings);
+    SDCARD_SPI.beginTransaction(m_spiSettings);
   }
   /** Deactivate SPI hardware. */
   void deactivate() {
-    SPI.endTransaction();
+    SDCARD_SPI.endTransaction();
   }
   /** Initialize the SPI bus.
    *
@@ -54,14 +64,14 @@ class SdSpiLibDriver {
     m_csPin = csPin;
     digitalWrite(csPin, HIGH);
     pinMode(csPin, OUTPUT);
-    SPI.begin();
+    SDCARD_SPI.begin();
   }
   /** Receive a byte.
    *
    * \return The byte.
    */
   uint8_t receive() {
-    return SPI.transfer( 0XFF);
+    return SDCARD_SPI.transfer( 0XFF);
   }
   /** Receive multiple bytes.
   *
@@ -72,7 +82,7 @@ class SdSpiLibDriver {
   */
   uint8_t receive(uint8_t* buf, size_t n) {
     for (size_t i = 0; i < n; i++) {
-      buf[i] = SPI.transfer(0XFF);
+      buf[i] = SDCARD_SPI.transfer(0XFF);
     }
     return 0;
   }
@@ -81,7 +91,7 @@ class SdSpiLibDriver {
    * \param[in] data Byte to send
    */
   void send(uint8_t data) {
-    SPI.transfer(data);
+    SDCARD_SPI.transfer(data);
   }
   /** Send multiple bytes.
    *
@@ -90,7 +100,7 @@ class SdSpiLibDriver {
    */
   void send(const uint8_t* buf, size_t n) {
     for (size_t i = 0; i < n; i++) {
-      SPI.transfer(buf[i]);
+      SDCARD_SPI.transfer(buf[i]);
     }
   }
   /** Set CS low. */
@@ -179,7 +189,7 @@ class SdSpiAltDriver {
   void setPort(uint8_t portNumber);
 
  private:
-  uint8_t m_spiPort;
+  SPIClass* m_spi;
 #else   // IMPLEMENT_SPI_PORT_SELECTION
  private:
 #endif  // IMPLEMENT_SPI_PORT_SELECTION

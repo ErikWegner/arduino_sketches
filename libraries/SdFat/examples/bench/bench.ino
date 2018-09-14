@@ -3,6 +3,7 @@
  */
 #include <SPI.h>
 #include "SdFat.h"
+#include "sdios.h"
 #include "FreeStack.h"
 
 // Set USE_SDIO to zero for SPI card access. 
@@ -135,7 +136,7 @@ void loop() {
   }
 
   // fill buf with known data
-  for (uint16_t i = 0; i < (BUF_SIZE-2); i++) {
+  for (size_t i = 0; i < (BUF_SIZE-2); i++) {
     buf[i] = 'A' + (i % 26);
   }
   buf[BUF_SIZE-2] = '\r';

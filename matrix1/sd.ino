@@ -84,4 +84,3 @@ uint32_t sd_scriptFilePosition() {
 void sd_scriptFileSeekPosition(uint32_t p) {
   scriptfile.seekSet(p);
 }
-

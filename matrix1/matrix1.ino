@@ -53,12 +53,12 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  //scriptprocessor_executeNextStatement();
+  scriptprocessor_executeNextStatement();
 #if DEBUG == 1
   Serial.println("loop");
 #endif
-delay(20);
-jump_and_run_tick();
+//delay(20);
+//jump_and_run_tick();
 }
 
 uint8_t volatile imagedata[MATRIX_WIDTH * MATRIX_HEIGHT * 4];
@@ -74,5 +74,3 @@ void loadAndShowImageFromSd(String filename) {
     panel_showImage((uint8_t*)&imagedata, 4);
   }
 }
-
-

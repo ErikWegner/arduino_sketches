@@ -1,5 +1,6 @@
 send_status = " "
 send_reset_delay = 0
+sleep_delay = 0
 
 config_loaded = false
 wifi_counter = 0
@@ -62,14 +63,16 @@ function loopfunc()
 
     local raw_data = hx711.read(0)
     local weightvalue = math.floor((raw_data - base) / scale / 100)/10
-    if weightvalue < 0 then
+    if weightvalue < 0.1 then
         weightvalue = 0.0
+        sleep_delay = sleep_delay + 1
     end
     
     if lastweightvalue > (weightvalue - 0.2) and lastweightvalue < (weightvalue + 0.2) then
         if lastweightcounter < 5 and lastweightvalue > 0 then
             lastweightcounter = lastweightcounter + 1
-        end
+            sleep_delay = 0
+        end        
     else
         lastweightcounter = 0
         lastweightvalue = weightvalue
@@ -103,14 +106,23 @@ function loopfunc()
         end
     end
 
+    local statusline = wifi_status .. '  ' .. tostring(lastweightcounter) .. '  ' .. send_status
+    if sleep_delay > 20 then
+        statusline = ' ---  o f f  ---'
+    end
+
     disp:firstPage()
     repeat
-        disp:setFont(u8g.font_6x10)
-        disp:drawStr( 0, 8, wifi_status .. '  ' .. tostring(lastweightcounter) .. '  ' .. send_status);
+        disp:setFont(u8g.font_6x10)        
+        disp:drawStr( 0, 8, statusline);
 
         disp:setFont(u8g.font_gdb25n);
         disp:drawStr(0, 63, string.format("%3.1f", weightvalue))
     until disp:nextPage() == false
+
+    if sleep_delay > 20 then
+        node.dsleep(0)
+    end
     
 end
 
