@@ -1,5 +1,6 @@
 send_status = " "
 send_reset_delay = 0
+sleep_delay = 0
 
 config_loaded = false
 wifi_counter = 0
@@ -11,6 +12,9 @@ lastweightcounter = 0
 
 API_URL = nil
 API_TOKEN = nil
+
+led_pin = 0 -- onboard LED (red)
+gpio.mode(led_pin, gpio.OUTPUT)
 
 function setupDisplay()
     local sda = 2
@@ -53,23 +57,34 @@ end
 function loopfunc()
     if not config_loaded then return end
     local wifi_status
+    local led_status
     if wifi.sta.getip ( ) == nil then
-    wifi_status = (wifi_counter % 2 == 0) and "W . " or "W : "
+        if wifi_counter % 2 == 0 then
+            led_status = gpio.HIGH
+            wifi_status = "W . "
+        else
+            led_status = gpio.LOW
+            wifi_status = "W : "
+        end
+        wifi_status = (wifi_counter % 2 == 0) and "W . " or "W : "
         wifi_counter = wifi_counter + 1
     else
         wifi_status = "W ^ "
+        led_status = gpio.LOW -- turn on
     end
 
     local raw_data = hx711.read(0)
     local weightvalue = math.floor((raw_data - base) / scale / 100)/10
-    if weightvalue < 0 then
+    if weightvalue <= 0.1 then
         weightvalue = 0.0
+        sleep_delay = sleep_delay + 1
     end
     
     if lastweightvalue > (weightvalue - 0.2) and lastweightvalue < (weightvalue + 0.2) then
         if lastweightcounter < 5 and lastweightvalue > 0 then
             lastweightcounter = lastweightcounter + 1
-        end
+            sleep_delay = 0
+        end        
     else
         lastweightcounter = 0
         lastweightvalue = weightvalue
@@ -83,7 +98,7 @@ function loopfunc()
                 'Content-Type: application/json\r\nAuthorization: Token ' .. API_TOKEN .. '\r\n',
                 '{"value":' .. tostring(weightvalue) .. '}',
                 function(code, data)
-                    if (code < 0) then
+                    if (code < 0 or code >= 400) then
                         send_status = "Err " .. tostring(code)
                         print("HTTP request failed")
                         print(data)
@@ -103,14 +118,25 @@ function loopfunc()
         end
     end
 
+    local statusline = wifi_status .. '  ' .. tostring(lastweightcounter) .. '  ' .. send_status
+    if sleep_delay > 20 then
+        statusline = ' ---  o f f  ---'
+        led_status = gpio.HIGH -- turn off
+    end
+
+    gpio.write(led_pin, led_status)
     disp:firstPage()
     repeat
-        disp:setFont(u8g.font_6x10)
-        disp:drawStr( 0, 8, wifi_status .. '  ' .. tostring(lastweightcounter) .. '  ' .. send_status);
+        disp:setFont(u8g.font_6x10)        
+        disp:drawStr( 0, 8, statusline);
 
         disp:setFont(u8g.font_gdb25n);
         disp:drawStr(0, 63, string.format("%3.1f", weightvalue))
     until disp:nextPage() == false
+
+    if sleep_delay > 20 then
+        node.dsleep(0)
+    end
     
 end
 
