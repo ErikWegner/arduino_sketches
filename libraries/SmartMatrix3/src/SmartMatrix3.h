@@ -28,7 +28,11 @@
 
 #include "Arduino.h"
 
-#include "MatrixHardware_KitV1.h"
+#ifdef V4HEADER
+    #include "MatrixHardware_KitV4.h"
+#else
+    #include "MatrixHardware_KitV1.h"
+#endif
 
 #include "MatrixCommon.h"
 
@@ -125,17 +129,21 @@ private:
     static SmartMatrix3<refreshDepth, matrixWidth, matrixHeight, panelType, optionFlags>* globalinstance;
 };
 
-#define SMARTMATRIX_HUB75_32ROW_MOD16SCAN             0
-#define SMARTMATRIX_HUB75_16ROW_MOD8SCAN              1
+#define SMARTMATRIX_HUB75_32ROW_MOD16SCAN   0
+#define SMARTMATRIX_HUB75_16ROW_MOD8SCAN    1
+#define SMARTMATRIX_HUB75_64ROW_MOD32SCAN   2
 
 #define CONVERT_PANELTYPE_TO_MATRIXPANELHEIGHT(x)   ((x == SMARTMATRIX_HUB75_32ROW_MOD16SCAN ? 32 : 0) | \
-                                                     (x == SMARTMATRIX_HUB75_16ROW_MOD8SCAN ? 16 : 0))
+                                                     (x == SMARTMATRIX_HUB75_16ROW_MOD8SCAN ? 16 : 0) | \
+                                                     (x == SMARTMATRIX_HUB75_64ROW_MOD32SCAN ? 64 : 0))
 
 #define CONVERT_PANELTYPE_TO_MATRIXROWPAIROFFSET(x)   ((x == SMARTMATRIX_HUB75_32ROW_MOD16SCAN ? 16 : 0) | \
-                                                     (x == SMARTMATRIX_HUB75_16ROW_MOD8SCAN ? 8 : 0))
+                                                     (x == SMARTMATRIX_HUB75_16ROW_MOD8SCAN ? 8 : 0) | \
+                                                     (x == SMARTMATRIX_HUB75_64ROW_MOD32SCAN ? 32 : 0))
 
 #define CONVERT_PANELTYPE_TO_MATRIXROWSPERFRAME(x)   ((x == SMARTMATRIX_HUB75_32ROW_MOD16SCAN ? 16 : 0) | \
-                                                     (x == SMARTMATRIX_HUB75_16ROW_MOD8SCAN ? 8 : 0))
+                                                     (x == SMARTMATRIX_HUB75_16ROW_MOD8SCAN ? 8 : 0) | \
+                                                     (x == SMARTMATRIX_HUB75_64ROW_MOD32SCAN ? 32 : 0))
 
 #define SMARTMATRIX_OPTIONS_NONE                    0
 #define SMARTMATRIX_OPTIONS_C_SHAPE_STACKING        (1 << 0)
@@ -144,7 +152,7 @@ private:
 
 // single matrixUpdateBlocks buffer is divided up to hold matrixUpdateBlocks, addressLUT, timerLUT to simplify user sketch code and reduce constructor parameters
 #define SMARTMATRIX_ALLOCATE_BUFFERS(matrix_name, width, height, pwm_depth, buffer_rows, panel_type, option_flags) \
-    static DMAMEM uint32_t matrixUpdateData[buffer_rows * ((width * height) / CONVERT_PANELTYPE_TO_MATRIXPANELHEIGHT(panel_type)) * (pwm_depth/COLOR_CHANNELS_PER_PIXEL / sizeof(uint32_t)) * DMA_UPDATES_PER_CLOCK]; \
+    static DMAMEM uint32_t matrixUpdateData[buffer_rows * (pwm_depth/COLOR_CHANNELS_PER_PIXEL / sizeof(uint32_t)) * ((((width * height) / CONVERT_PANELTYPE_TO_MATRIXPANELHEIGHT(panel_type)) * DMA_UPDATES_PER_CLOCK + ADDX_UPDATE_BEFORE_LATCH_BYTES))]; \
     static DMAMEM uint8_t matrixUpdateBlocks[(sizeof(matrixUpdateBlock) * buffer_rows * pwm_depth/COLOR_CHANNELS_PER_PIXEL) + (sizeof(addresspair) * CONVERT_PANELTYPE_TO_MATRIXROWSPERFRAME(panel_type)) + (sizeof(timerpair) * pwm_depth/COLOR_CHANNELS_PER_PIXEL) + sizeof(timerpair)]; \
     SmartMatrix3<pwm_depth, width, height, panel_type, option_flags> matrix_name(buffer_rows, matrixUpdateData, matrixUpdateBlocks)
 

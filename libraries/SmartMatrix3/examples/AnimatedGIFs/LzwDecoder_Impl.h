@@ -27,60 +27,26 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#define DEBUG 0
+#define LZWDEBUG 0
 
+#if defined (ARDUINO)
 #include <Arduino.h>
-#include "GIFDecoder.h"
+#elif defined (SPARK)
+#include "application.h"
+#endif
 
-// LZW constants
-// NOTE: LZW_MAXBITS should be set to 10 or 11 for small displays, 12 for large displays
-//   all 32x32-pixel GIFs tested work with 11, most work with 10
-//   LZW_MAXBITS = 12 will support all GIFs, but takes 16kB RAM
-#define LZW_MAXBITS    12
-#define LZW_SIZTABLE  (1 << LZW_MAXBITS)
+#include "GifDecoder.h"
 
-// Masks for 0 .. 16 bits
-unsigned int mask[17] = {
-    0x0000, 0x0001, 0x0003, 0x0007,
-    0x000F, 0x001F, 0x003F, 0x007F,
-    0x00FF, 0x01FF, 0x03FF, 0x07FF,
-    0x0FFF, 0x1FFF, 0x3FFF, 0x7FFF,
-    0xFFFF
-};
-
-// LZW variables
-int bbits;
-int bbuf;
-int cursize;                // The current code size
-int curmask;
-int codesize;
-int clear_code;
-int end_code;
-int newcodes;               // First available code
-int top_slot;               // Highest code for current size
-int extra_slot;
-int slot;                   // Last read code
-int fc, oc;
-int bs;                     // Current buffer size for GIF
-int bcnt;
-byte *sp;
-get_bytes_callback getBytesCallback;
-byte * temp_buffer;
-
-byte stack  [LZW_SIZTABLE];
-byte suffix [LZW_SIZTABLE];
-uint16_t prefix [LZW_SIZTABLE];
-
-void lzw_setTempBuffer(byte * tempBuffer) {
+template <int maxGifWidth, int maxGifHeight, int lzwMaxBits>
+void GifDecoder<maxGifWidth, maxGifHeight, lzwMaxBits>::lzw_setTempBuffer(uint8_t * tempBuffer) {
     temp_buffer = tempBuffer;
 }
 
 // Initialize LZW decoder
 //   csize initial code size in bits
 //   buf input data
-void lzw_decode_init (int csize, get_bytes_callback f) {
-
-    getBytesCallback = f;
+template <int maxGifWidth, int maxGifHeight, int lzwMaxBits>
+void GifDecoder<maxGifWidth, maxGifHeight, lzwMaxBits>::lzw_decode_init (int csize) {
 
     // Initialize read buffer variables
     bbuf = 0;
@@ -101,14 +67,15 @@ void lzw_decode_init (int csize, get_bytes_callback f) {
 }
 
 //  Get one code of given number of bits from stream
-int lzw_get_code() {
+template <int maxGifWidth, int maxGifHeight, int lzwMaxBits>
+int GifDecoder<maxGifWidth, maxGifHeight, lzwMaxBits>::lzw_get_code() {
 
     while (bbits < cursize) {
         if (bcnt == bs) {
             // get number of bytes in next block
-            (*getBytesCallback)(temp_buffer, 1);
+            readIntoBuffer(temp_buffer, 1);
             bs = temp_buffer[0];
-            (*getBytesCallback)(temp_buffer, bs);
+            readIntoBuffer(temp_buffer, bs);
             bcnt = 0;
         }
         bbuf |= temp_buffer[bcnt] << bbits;
@@ -125,10 +92,11 @@ int lzw_get_code() {
 //   buf 8 bit output buffer
 //   len number of pixels to decode
 //   returns the number of bytes decoded
-int lzw_decode(byte *buf, int len) {
+template <int maxGifWidth, int maxGifHeight, int lzwMaxBits>
+int GifDecoder<maxGifWidth, maxGifHeight, lzwMaxBits>::lzw_decode(uint8_t *buf, int len, uint8_t *bufend) {
     int l, c, code;
 
-#if DEBUG == 1
+#if LZWDEBUG == 1
     unsigned char debugMessagePrinted = 0;
 #endif
 
@@ -139,7 +107,17 @@ int lzw_decode(byte *buf, int len) {
 
     for (;;) {
         while (sp > stack) {
-            *buf++ = *(--sp);
+            // load buf with data if we're still within bounds
+            if(buf < bufend) {
+                *buf++ = *(--sp);
+            } else {
+                // out of bounds, keep incrementing the pointers, but don't use the data
+#if LZWDEBUG == 1
+                // only print this message once per call to lzw_decode
+                if(buf == bufend)
+                    Serial.println("****** LZW imageData buffer overrun *******");
+#endif
+            }
             if ((--l) == 0) {
                 return len;
             }
@@ -157,7 +135,7 @@ int lzw_decode(byte *buf, int len) {
             fc= oc= -1;
 
         }
-        else	{
+        else    {
 
             code = c;
             if ((code == slot) && (fc >= 0)) {
@@ -179,14 +157,14 @@ int lzw_decode(byte *buf, int len) {
             fc = code;
             oc = c;
             if (slot >= top_slot) {
-                if (cursize < LZW_MAXBITS) {
+                if (cursize < lzwMaxBits) {
                     top_slot <<= 1;
                     curmask = mask[++cursize];
                 } else {
-#if DEBUG == 1
+#if LZWDEBUG == 1
                     if(!debugMessagePrinted) {
                         debugMessagePrinted = 1;
-                        Serial.println("****** cursize >= MAXBITS *******");
+                        Serial.println("****** cursize >= lzwMaxBits *******");
                     }
 #endif
                 }

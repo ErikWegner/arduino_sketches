@@ -1,7 +1,7 @@
 /**
-   Arduino IDE 1.8.2 https://www.arduino.cc/en/Main/Software
-   Teensyduino 1.36 https://www.pjrc.com/teensy/td_download.html
-   SmartMatrix3 3.0.1 https://github.com/pixelmatix/SmartMatrix
+   Arduino IDE 1.8.9 https://www.arduino.cc/en/Main/Software
+   Teensyduino 1.47 https://www.pjrc.com/teensy/td_download.html
+   SmartMatrix3 3.2.0 https://github.com/pixelmatix/SmartMatrix
    SdFat 2016.7.24 https://github.com/greiman/SdFat-beta/tree/master/SdFat
    FlexiTimer2 1.1.0 https://github.com/PaulStoffregen/FlexiTimer2
    SPI 1.0

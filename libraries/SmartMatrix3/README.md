@@ -1,6 +1,6 @@
 # SmartMatrix Library for Teensy 3
 
-The SmartMatrix Library is designed to make it easy to display graphics and scrolling text on multiplexed RGB LED matrix panels connected to a Teensy 3.
+The SmartMatrix Library is designed to make it easy to display graphics and scrolling text on multiplexed RGB LED matrix panels connected to a Teensy 3 (Supports Teensy 3.1/3.2, 3.5, 3.6).
 
 Version 3.0 is a significant upgrade from 2.x, with a new API that is not backwards compatible.  See the [release notes on GitHub](https://github.com/pixelmatix/SmartMatrix/releases) for more details, and [MIGRATION.md](https://github.com/pixelmatix/SmartMatrix/blob/sm3.0/MIGRATION.md) for details on migrating sketches from SmartMatrix 2.x to 3.0.  You can have SmartMatrix3 installed in parallel with an existing SmartMatrix_32x32 or SmartMatrix_16x32 library without conflicts.
 
@@ -10,18 +10,18 @@ More documentation Here:
 To download in Arduino Library form, see [Releases](https://github.com/pixelmatix/SmartMatrix/releases) on GitHub, or just add the files in the /src directory to your Arduino project.
 
 ### Software and Teensy Setup
-This documentation assumes you have a general knowledge of the Teensy 3.1/3.2, how to use the Arduino IDE, and the Teensyduino addon.  If you need an overview of any of those tools, please use these references:
+This documentation assumes you have a general knowledge of the Teensy 3, how to use the Arduino IDE, and the Teensyduino addon.  If you need an overview of any of those tools, please use these references:
 
 * [PJRC - Teensyduino](http://www.pjrc.com/teensy/teensyduino.html)
 * [Arduino - Getting Started with Arduino](http://arduino.cc/en/Guide/HomePage)
-* For general Teensy 3.1/3.2 support, not related to the SmartMatrix Shield or SmartMatrix Library, post a question at the [PJRC Forum](http://forum.pjrc.com/forums/3-Technical-Support-amp-Questions)
+* For general Teensy 3 support, not related to the SmartMatrix Shield or SmartMatrix Library, post a question at the [PJRC Forum](http://forum.pjrc.com/forums/3-Technical-Support-amp-Questions)
 
 Make sure you have a supported version of the Arduino IDE and Teensyduino add-on installed.
 
-* [Arduino IDE](http://arduino.cc/en/main/software) - version 1.6.5 recomended
+* [Arduino IDE](http://arduino.cc/en/main/software) - version 1.6.5 or later recommended
 * [Teensyduino](http://www.pjrc.com/teensy/td_download.html) - use the latest version
 
-Before continuing, use the blink example in the Arduino IDE to verify you can compile and run a sketch on your Teensy 3.1/3.2.
+Before continuing, use the blink example in the Arduino IDE to verify you can compile and run a sketch on your Teensy 3.
 
 Download the latest version of the SmartMatrix Library:  
 [SmartMatrix Releases - GitHub](https://github.com/pixelmatix/SmartMatrix/releases)
@@ -29,11 +29,22 @@ Download the latest version of the SmartMatrix Library:
 Import the library, see instructions from Arduino here:  
 [Arduino - Libraries](http://arduino.cc/en/Guide/Libraries)
 
+(Note if you use the Arduino Library Manager, the [AnimatedGIFs](https://github.com/pixelmatix/AnimatedGIFs) example won't be included, as that sketch is included as a Git Submodule which is not supported by Arduino Library Manager.  You will need to download the [AnimatedGIFs](https://github.com/pixelmatix/AnimatedGIFs) example separately)
+
 Start with the FeatureDemo Example project, included with the library.  From the Arduino File menu, choose Examples, SmartMatrix3, then FeatureDemo.  
+
+Important note for SmartLED Shield V4: This line needs to be included before (or instead of) `#include <SmartMatrix3.h>`
+
+```
+#include <SmartLEDShieldV4.h> // this line must be first
+#include <SmartMatrix3.h> //optionally include this line for SmartLED Shield V4
+```
 
 You should already have most of the correct Arduino settings to load the FeatureDemo sketch on your Teensy, from running the blink example earlier.  Under Tools, CPU Speed, make sure either 48 MHz or 96MHz (overclock) is selected.  (Some libraries are not compatible with the 72MHz CPU)
 
-The examples are configured to run on a 32x32-pixel panel.  If your resolution is different, adjust the `kMatrixWidth` and `kMatrixHeight` variables at the top of the sketch.  If you are using a 16x32-pixel panel, also change `kPanelType` to `SMARTMATRIX_HUB75_16ROW_MOD8SCAN`.
+The examples are configured to run on a 32x32-pixel panel.  If your resolution is different, adjust the `kMatrixWidth` and `kMatrixHeight` variables at the top of the sketch.  If you are using a 16x32-pixel panel, also change `kPanelType` to `SMARTMATRIX_HUB75_16ROW_MOD8SCAN`.  If you are using a 64x64-pixel panel, also change `kPanelType` to `SMARTMATRIX_HUB75_64ROW_MOD32SCAN`.
+
+### Chaining Panels
 
 New with SmartMatrix Library 3.0, you can chain several panels together to create a wider or taller display than one panel would allow.  Set `kMatrixWidth` and `kMatrixHeight` to the overall width and height of your display.  If your display is more than one panel high, set `kMatrixOptions` to how you tiled your panels:  
 
@@ -52,7 +63,7 @@ Some SmartMatrix examples require external libraries to compile.  You may alread
 Installing Arduino libraries from GitHub has a couple pitfalls.  [This Adafruit tutorial](https://learn.adafruit.com/adafruit-all-about-arduino-libraries-install-use/) explains the basics of installing libraries and how to avoid the pitfalls.
 
 **FastLED**  
-If you're having trouble compiling Aurora and are getting errors that refer to FastLED.h, try compiling the `FastLED_Functions` example first, which will help narrow down the issue.
+If you're having trouble compiling Aurora and are getting errors that refer to FastLED.h, try compiling the `FastLED_Functions` example first, which will help narrow down the issue.  Also make sure you are using FastLED 3.1 or later.
 
 This error means the FastLED library isn't installed (correctly):  
 `fatal error: FastLED.h: No such file or directory`
