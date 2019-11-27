@@ -1,3 +1,12 @@
+/**
+ * Steuerung eines 4-Kanal-Relaismodul
+ * Arduino -> Relaismodul
+ * PIN 3 -> In1
+ * PIN 4 -> In2
+ * PIN 5 -> In3
+ * PIN 6 -> In4
+ */
+
 #define RELAISDELAY 250
 #define LEFTPOWER 3
 #define LEFTDIR 4

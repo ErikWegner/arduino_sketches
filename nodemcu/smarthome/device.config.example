@@ -1,0 +1,5 @@
+WIFI_SSID = "SSID"
+WIFI_PASSWORD = "p4ssworD"
+MQTT_USERNAME = "username"
+MQTT_PASSWORD = "password"
+MQTT_SERVERNAME = "mybroker.example.com"
