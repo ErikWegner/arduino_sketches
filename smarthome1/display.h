@@ -17,9 +17,14 @@ class DisplayHelper
     DisplayHelper();
     void init();
     void status(char* text);
+    void sensorData(float temperature, float pressure);
+    void isTransmitting(bool transmitStatus);
   private:
     Adafruit_SSD1306 _display;
     char _text[BUFFERLENGTH_STATUS];
+    bool _isTransmitting;
+    char _sensorData[BUFFERLENGTH_STATUS];
+    void refresh();
 };
 
 #endif

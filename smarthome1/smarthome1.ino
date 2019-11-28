@@ -17,6 +17,12 @@
 //Simple boolean to indicate first startup loop
 bool startup = false;
 
+// timer and interrupt variables
+bool readSensor = false;
+float temperature = 0.0;
+float pressure = 0.0;
+bool sendMqttData;
+
 WiFiClientSecure client;
 PubSubClient mqttclient(client);
 DisplayHelper display;
@@ -37,25 +43,31 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
 
 void reconnect() {
-  // Loop until we're reconnected to the MQTT server
-  while (!mqttclient.connected()) {
-    Serial.print("Attempting MQTT connection...");
-    display.status("MQTT connect... ");
-    //Attempt to connect
-    if (mqttclient.connect(mqtt_clientname, mqtt_username, mqtt_password)) {
-      Serial.println("connected");
-      display.status("OK");
-      //Subscribe to topic
-      mqttclient.subscribe(mqtt_topic);
-    } else {
-      Serial.print("failed, rc=");
-      Serial.print(mqttclient.state());
-      display.status("mqtt failed (5 sec)"); 
-      Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
-      delay(5000);
-    } //if
-  }//while
+  Serial.print("Attempting MQTT connection...");
+  display.status("MQTT connect... ");
+  //Attempt to connect
+  if (mqttclient.connect(mqtt_clientname, mqtt_username, mqtt_password)) {
+    Serial.println("connected");
+    display.status("OK");
+    //Subscribe to topic
+    mqttclient.subscribe(mqtt_topic);
+  } else {
+    Serial.print("failed, rc=");
+    Serial.print(mqttclient.state());
+    display.status("mqtt failed (5 sec)");
+    Serial.println(" try again in 5 seconds");
+    // Wait 5 seconds before retrying
+    delay(5000);
+  } //if
+}
+
+void publishFloat(char* topic, float v) {
+  Serial.println("publishFloat");
+  char floatBuffer[8];
+  Serial.println("dtostrf");
+  dtostrf(v, 5, 2, floatBuffer);
+  Serial.println("publish");
+  mqttclient.publish(topic, floatBuffer);
 }
 
 void setup()
@@ -76,7 +88,10 @@ void setup()
     Serial.println(F("Could not find a valid BMP280 sensor, check wiring!"));
   }
 
+  isr_init();
+
   Serial.println("Connecting to WiFi.");
+  display.status("Waiting for WiFi");
   int _try = 0;
   while (WiFi.status() != WL_CONNECTED) {
     Serial.print(".");
@@ -95,7 +110,6 @@ void setup()
   //Connect to your MQTT Server and set callback
   mqttclient.setServer(mqtt_server, mqtt_port);
   mqttclient.setCallback(callback);
-
 }
 
 void loop()
@@ -112,4 +126,19 @@ void loop()
   };
 
   mqttclient.loop();
+
+  if (readSensor) {
+    updateSensorValues();
+  }
+
+  if (sendMqttData) {
+    Serial.println("sendMqttt");
+    display.isTransmitting(true);
+    sendMqttData = false;
+    publishFloat("/d/r1/sensors/temp", temperature);
+    publishFloat("/d/r1/sensors/pressure", pressure);
+    display.isTransmitting(false);
+  }
+
+  yield();
 }
