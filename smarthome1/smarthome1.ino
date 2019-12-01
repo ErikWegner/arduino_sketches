@@ -1,4 +1,4 @@
-// Mar 2019 by Jesse Bedard
+  // Mar 2019 by Jesse Bedard
 // Released to the public domain
 
 // Arduino IDE 1.8.9
@@ -76,6 +76,8 @@ void setup()
   Serial.println("Boot");
   Wire.begin();
   display.init();
+  WiFi.enableAP(false);
+  WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   //****
   //Important to set fingerprint to verify server
