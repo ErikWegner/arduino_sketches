@@ -3,7 +3,7 @@
 
 // Arduino IDE 1.8.9
 #include <Wire.h>
-
+// SCL <-> D1, SCA <-> D2
 // ESP8266 Version 2.6.1
 #include <ESP8266WiFi.h>
 // Version 2.7.0

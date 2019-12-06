@@ -56,7 +56,7 @@ void DisplayHelper::sensorData(float temperature, float pressure)
 #ifdef DISPLAY_DEBUG
   Serial.print("Sensor data: ");
 #endif
-  sprintf(this->_sensorData, "%.1f hPA  %.1f %cC", pressure, temperature, 0xBA);
+  sprintf(this->_sensorData, "%.1f hPA  %.1f 'C", pressure, temperature, 0xBA);
 #ifdef DISPLAY_DEBUG
   Serial.println(this->_sensorData);
 #endif
