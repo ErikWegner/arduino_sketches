@@ -9,6 +9,10 @@
 #define MOTORLINKSRICHTUNG 4 // D2, GPIO4
 #define MOTORRECHTSPOWER 14 // D5, GPIO14
 #define MOTORRECHTSRICHTUNG 12 // D6, GPIO12
+#define BUTTONLINKSHOCH 13 // D7, GPIO13
+#define BUTTONLINKSRUNTER 15 // D8, GPIO15
+#define BUTTONRECHTSHOCH 10 // SD3, GPIO10
+#define BUTTONRECHTSRUNTER 9 // SD2, GPIO9
 #define BUFFERLENGTH_STATUS 20
 #define BUFFERLENGTH_SENSORLINE 20
 #include "secrets.h"
@@ -26,11 +30,16 @@ const Url url(MQTT_URL);
 char statusText[BUFFERLENGTH_STATUS];
 char sensorLine[BUFFERLENGTH_SENSORLINE];
 
-
+bool leftUp = false;
+bool leftDown = false;
+bool rightUp = false;
+bool rightDown = false;
+volatile bool buttonInterruptTriggered = false;
 
 // Forward declarations
 void startMqttClient();
 void reconnectMQTT(bool flag);
+void clearInterruptStates();
 
 MqttClient mqtt;
 NtpClient* ntpClient;
@@ -67,7 +76,7 @@ void publishInt(const char* topic, int v)
 	m_snprintf(svalue, PUBLISH_INT_BUFFER_LENGTH, "%i", v);
 	Serial.print(_F("Value is "));
 	Serial.println(svalue);
-	mqtt.publish(topic, svalue);
+	mqtt.publish(topic, svalue, MQTT_FLAG_RETAINED);
 	Serial.println(_F("Data send"));
 }
 
@@ -86,7 +95,7 @@ void publishFloat(const char* topic, float v)
 	m_snprintf(svalue, PUBLISH_FLOAT_BUFFER_LENGTH, "%.1f", v);
 	Serial.print(_F("Value is "));
 	Serial.println(svalue);
-	mqtt.publish(topic, svalue);
+	mqtt.publish(topic, svalue, MQTT_FLAG_RETAINED);
 	Serial.println(_F("Data send"));
 }
 
@@ -131,6 +140,50 @@ void readSensors()
 	updateSensorLine();
 }
 
+void readButtons() {
+	clearInterruptStates();
+
+	if (digitalRead(BUTTONLINKSHOCH) == HIGH && leftUp == false) {
+		Serial.println("Links hoch");
+		leftUp = true;
+		leftDown = false;
+		motorLinks.setCommand(MotorCommands::MOVE_UP);
+	}
+	if (digitalRead(BUTTONLINKSRUNTER) == HIGH && leftDown == false) {
+		Serial.println("Links runter");
+		leftUp = false;
+		leftDown = true;
+		motorLinks.setCommand(MotorCommands::MOVE_DOWN);
+	}
+	if (leftUp == false && leftDown == false) {
+		Serial.println("Links stops");
+		motorLinks.setCommand(MotorCommands::STOP);
+	}
+
+	if (digitalRead(BUTTONRECHTSHOCH) == HIGH && rightUp == false) {
+		Serial.println("Rechts hoch");
+		rightUp = true;
+		rightDown = false;
+		motorRechts.setCommand(MotorCommands::MOVE_UP);
+	}
+	if (digitalRead(BUTTONRECHTSRUNTER) == HIGH && rightDown == false) {
+		Serial.println("Rechts runter");
+		rightUp = false;
+		rightDown = true;
+		motorRechts.setCommand(MotorCommands::MOVE_DOWN);
+	}
+	if (rightUp == false && rightDown == false) {
+		Serial.println("Rechts stops");
+		motorRechts.setCommand(MotorCommands::STOP);
+	}
+
+	Serial.print("BUTTONLINKSHOCH ");
+	Serial.print(digitalRead(BUTTONLINKSHOCH));
+	Serial.print("BUTTONLINKSRUNTER ");
+	Serial.print(digitalRead(BUTTONLINKSRUNTER));
+	Serial.println();
+}
+
 void blink()
 {
 	digitalWrite(LED_PIN, state);
@@ -141,14 +194,22 @@ void blink()
 		blinkCounter = 0;
 		System.queueCallback(readSensors);
 	}
+	yield();
+	if (buttonInterruptTriggered) {
+		readButtons();
+	}
+	yield();
 	motorLinks.tick();
+	yield();
 	if (motorLinks.publishPosition()) {
 		publishInt("/d/r1/position/left", motorLinks.estimatedPosition());
 	}
+	yield();
 	motorRechts.tick();
 	if (motorRechts.publishPosition()) {
 		publishInt("/d/r1/position/right", motorRechts.estimatedPosition());
 	}
+	yield();
 }
 
 void initSensor() {
@@ -200,12 +261,37 @@ void onMessageReceived(String topic, String message)
 	if (message == _F("left-down")) {
 		motorLinks.setCommand(MotorCommands::MOVE_DOWN);
 	}
+	if (message == _F("left-stop")) {
+		motorLinks.setCommand(MotorCommands::STOP);
+	}
 	if (message == _F("right-up")) {
 		motorRechts.setCommand(MotorCommands::MOVE_UP);
 	}
 	if (message == _F("right-down")) {
 		motorRechts.setCommand(MotorCommands::MOVE_DOWN);
 	}
+	if (message == _F("right-stop")) {
+		motorRechts.setCommand(MotorCommands::STOP);
+	}
+}
+
+void clearInterruptStates()
+{
+	buttonInterruptTriggered = false;
+}
+
+void buttonInterruptHandler() { buttonInterruptTriggered = true; }
+
+void attachInterrupts()
+{
+	pinMode(BUTTONLINKSHOCH, INPUT_PULLUP);
+	pinMode(BUTTONLINKSRUNTER, INPUT_PULLUP);
+	pinMode(BUTTONRECHTSHOCH, INPUT_PULLUP);
+	pinMode(BUTTONRECHTSRUNTER, INPUT_PULLUP);
+	attachInterrupt(digitalPinToInterrupt(BUTTONLINKSRUNTER), buttonInterruptHandler, CHANGE);
+	attachInterrupt(digitalPinToInterrupt(BUTTONLINKSHOCH), buttonInterruptHandler, CHANGE);
+	attachInterrupt(digitalPinToInterrupt(BUTTONRECHTSRUNTER), buttonInterruptHandler, CHANGE);
+	attachInterrupt(digitalPinToInterrupt(BUTTONRECHTSHOCH), buttonInterruptHandler, CHANGE);
 }
 
 void startMqttClient()
@@ -244,6 +330,8 @@ void init()
 	Serial.systemDebugOutput(true); // Allow debug print to serial
 	Serial.println(_F("Sming. Let's do smart things!"));
 
+	attachInterrupts();
+
 	Wire.begin();
 
 	pinMode(LED_PIN, OUTPUT);
@@ -261,9 +349,9 @@ void init()
 	initSensor();
 
 	// Station - WiFi client
-	WifiStation.enable(true);
 	WifiStation.config(_F(WIFI_SSID), _F(WIFI_PWD));
-
+	WifiStation.enable(true);
 	// Set callback that should be triggered when we have assigned IP
 	WifiEvents.onStationGotIP(connectOk);
+	WifiAccessPoint.enable(false);
 }

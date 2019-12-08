@@ -26,6 +26,7 @@ JDGFoqgCWjBH4d1QB7wCCZAA62RjYJsWvIjJEubSfZGL+T0yjWW06XyxV3bqxbYo
 Ob8VZRzI9neWagqNdwvYkQsEjgfbKbYK7p2CNTUQ
 -----END CERTIFICATE-----
 ]])
+tls.cert.verify(false)
 
 function u8g2_prepare()
   disp:setFont(u8g2.font_6x10_tf)
@@ -92,8 +93,7 @@ function do_mqtt_connect()
 end
 
 function connected()
-    --do_mqtt_connect()
-    
+    do_mqtt_connect()
 end
 
 function wifiEvents()
