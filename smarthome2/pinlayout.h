@@ -1,0 +1,11 @@
+#ifndef PINLAYOUT
+#define PINLAYOUT
+
+#define BUTTONLINKSHOCH    34
+#define BUTTONRECHTSHOCH   35
+#define BUTTONLINKSRUNTER  36
+#define BUTTONRECHTSRUNTER 37
+
+#define LED_BUILTIN 2
+
+#endif
