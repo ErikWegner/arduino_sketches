@@ -1,5 +1,6 @@
 #include "pinlayout.h"
 #include "motorsteuerung.h"
+#include "comm.h"
 
 volatile bool readButtons = false;
 volatile bool ledState = false;
@@ -33,6 +34,7 @@ void setup() {
   delay(1500);
   Serial.println(F("Starting timer"));
   setupTimer();
+  setupWifi();
 }
 
 void loop() {
