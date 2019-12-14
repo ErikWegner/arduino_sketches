@@ -8,6 +8,12 @@
 #include "secret.h"
 #include "motorsteuerung.h"
 
+portMUX_TYPE publishPositionMutex = portMUX_INITIALIZER_UNLOCKED;
+bool publishPositionL = false;
+bool publishPositionR = false;
+int positionL = 0;
+int positionR = 0;
+
 TaskHandle_t WifiMqttTask;
 
 #define TASK_DELAY 50
@@ -16,7 +22,7 @@ bool isWifiConnected = false;
 signed char wifi_reconnect_timeout = 0;
 signed char mqtt_reconnect_timeout = 0;
 long lastRun = 0;
-
+char mqtt_payload[20];
 // Set this pointers to a command to tell the other task what to do
 MotorCommand *mqttCmdLinks = nullptr;
 MotorCommand *mqttCmdRechts = nullptr;
@@ -80,6 +86,14 @@ void receivedCallback(char* topic, byte* payload, unsigned int length) {
       } // length == 9
     }// length == 8
   } // length == 10
+}
+
+void publishInt(const char* topic, int v)
+{
+#define PUBLISH_INT_BUFFER_LENGTH 4
+  char svalue[PUBLISH_INT_BUFFER_LENGTH];
+  snprintf(svalue, PUBLISH_INT_BUFFER_LENGTH, "%i", v);
+  client.publish(topic, svalue, true);
 }
 
 void ensureWifiAndMqtt() {
@@ -162,6 +176,18 @@ void ensureWifiAndMqttTask(void * pvParameters) {
   for (;;) {
     ensureWifiAndMqtt();
     delay(TASK_DELAY);
+    if (publishPositionL || publishPositionR) {
+      if (publishPositionL) {
+        publishInt("/d/r1/position/left", positionL);
+      }
+      if (publishPositionR) {
+        publishInt("/d/r1/position/right", positionR);
+      }
+      portENTER_CRITICAL_ISR(&publishPositionMutex);
+      publishPositionL = false;
+      publishPositionR = false;
+      portEXIT_CRITICAL_ISR(&publishPositionMutex);
+    }
   }
 }
 

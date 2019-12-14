@@ -50,11 +50,21 @@ void loop() {
     mqttCmdLinks = nullptr;
     motorTick = true;
   }
-  
+
   checkButtons(&motorLinks, &motorRechts);
   if (motorTick) {
     motorLinks.tick();
     motorRechts.tick();
     motorTick = false;
+    bool publishLeft = motorLinks.publishPosition();
+    bool publishRight = motorRechts.publishPosition();
+    if (publishLeft || publishRight) {
+      positionL = motorLinks.estimatedPosition();
+      positionR = motorRechts.estimatedPosition();
+      portENTER_CRITICAL_ISR(&publishPositionMutex);
+      publishPositionL = publishLeft;
+      publishPositionR = publishRight;
+      portEXIT_CRITICAL_ISR(&publishPositionMutex);
+    }
   }
 }
