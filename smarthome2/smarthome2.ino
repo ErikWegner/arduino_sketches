@@ -1,3 +1,5 @@
+// pip install --user esptool
+
 #include "pinlayout.h"
 #include "motorsteuerung.h"
 #include "comm.h"
