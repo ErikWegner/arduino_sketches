@@ -7,9 +7,14 @@
 
 #include "secret.h"
 
-#define DEFAULT_TIMEOUT 15
+TaskHandle_t WifiMqttTask;
+
+#define TASK_DELAY 50
+#define DEFAULT_TIMEOUT (5 * 1000 / TASK_DELAY)
 bool isWifiConnected = false;
 signed char wifi_reconnect_timeout = 0;
+signed char mqtt_reconnect_timeout = 0;
+long lastRun = 0;
 
 WiFiClientSecure espClient;
 PubSubClient client(espClient);
@@ -46,6 +51,15 @@ void ensureWifiAndMqtt() {
     return;
   }
 
+  if (mqtt_reconnect_timeout > 0)
+  {
+    Serial.print("MQTT reconnect timeout = ");
+    Serial.println(mqtt_reconnect_timeout);
+    mqtt_reconnect_timeout--;
+    return;
+  }
+
+  mqtt_reconnect_timeout = DEFAULT_TIMEOUT;
   connectToMqtt();
 }
 
@@ -92,11 +106,30 @@ void WiFiEvent(WiFiEvent_t event) {
   }
 }
 
+// https://randomnerdtutorials.com/esp32-dual-core-arduino-ide/
+void ensureWifiAndMqttTask(void * pvParameters) {
+  Serial.print("ensureWifiAndMqtt running on core ");
+  Serial.println(xPortGetCoreID());
+  for (;;) {
+    ensureWifiAndMqtt();
+    delay(TASK_DELAY);
+  }
+}
+
 void setupWifi() {
   espClient.setCACert(ca_cert);
   client.setServer(MQTT_SERVER, MQTT_PORT);
   client.setCallback(receivedCallback);
   WiFi.onEvent(WiFiEvent);
   connectToWifi();
+  xTaskCreatePinnedToCore(
+    ensureWifiAndMqttTask,    /* Task function. */
+    "WiFiMqtt",               /* name of task. */
+    10000,                    /* Stack size of task */
+    NULL,                     /* parameter of the task */
+    1,                        /* priority of the task */
+    &WifiMqttTask,            /* Task handle to keep track of created task */
+    0);                       /* pin task to core 0 */
 }
+
 #endif

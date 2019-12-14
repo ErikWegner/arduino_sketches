@@ -45,6 +45,5 @@ void loop() {
     motorLinks.tick();
     motorRechts.tick();
     motorTick = false;
-    ensureWifiAndMqtt();
   }
 }
