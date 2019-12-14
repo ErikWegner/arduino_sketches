@@ -129,8 +129,9 @@ void ensureWifiAndMqtt() {
 void connectToMqtt() {
   Serial.println("Connecting to MQTT broker...");
 
-  if (client.connect(MQTT_CLIENTNAME, MQTT_USERNAME, MQTT_PASSWORD)) {
+  if (client.connect(MQTT_CLIENTNAME, MQTT_USERNAME, MQTT_PASSWORD, "/d/r1/alive", 0, 1, "off", true)) {
     Serial.println("mqtt connected");
+    client.publish("/d/r1/alive", "on");
     client.subscribe("/d/r1/cmd/move");
   } else {
     Serial.print("failed, status code =");
