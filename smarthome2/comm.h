@@ -7,7 +7,7 @@
 
 #include "secret.h"
 
-#define DEFAULT_TIMEOUT 5
+#define DEFAULT_TIMEOUT 15
 bool isWifiConnected = false;
 signed char wifi_reconnect_timeout = 0;
 
@@ -29,7 +29,7 @@ void receivedCallback(char* topic, byte* payload, unsigned int length) {
 }
 
 void ensureWifiAndMqtt() {
-  if (!isWifiConnected){
+  if (!isWifiConnected) {
     if (wifi_reconnect_timeout > 0) {
       wifi_reconnect_timeout = wifi_reconnect_timeout - 1;
       return;
@@ -42,6 +42,7 @@ void ensureWifiAndMqtt() {
   }
 
   if (client.connected()) {
+    client.loop();
     return;
   }
 
@@ -53,6 +54,7 @@ void connectToMqtt() {
 
   if (client.connect(MQTT_CLIENTNAME, MQTT_USERNAME, MQTT_PASSWORD)) {
     Serial.println("mqtt connected");
+    client.subscribe("/d/r1/cmd/move");
   } else {
     Serial.print("failed, status code =");
     Serial.print(client.state());
@@ -60,7 +62,7 @@ void connectToMqtt() {
 }
 
 void connectToWifi() {
-  if (!isWifiConnected) {
+  if (isWifiConnected) {
     return;
   }
 
@@ -76,7 +78,11 @@ void WiFiEvent(WiFiEvent_t event) {
       Serial.println("IP address: ");
       Serial.println(WiFi.localIP());
       isWifiConnected = true;
-      connectToMqtt();
+      /*
+          Calling connectToMqtt() here gives a
+          Guru Meditation Error: Core  1 panic'ed (Unhandled debug exception)
+          Debug exception reason: Stack canary watchpoint triggered (network_event)
+      */
       break;
     case SYSTEM_EVENT_STA_DISCONNECTED:
       Serial.println("WiFi lost connection");

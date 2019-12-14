@@ -7,7 +7,6 @@
 #define MQTT_USERNAME "IoTDevice"
 #define MQTT_PASSWORD "IoT0nlyS3cur3"
 #define MQTT_CLIENTNAME "esp8266-a"
-#define OTA_PASSWORDHASH "21232f297a57a5a743894a0e4a801fc3" // md5("admin")
 
 const char* ca_cert = \ 
 "-----BEGIN CERTIFICATE-----\n" \
