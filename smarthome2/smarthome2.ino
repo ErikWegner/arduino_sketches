@@ -40,6 +40,17 @@ void setup() {
 }
 
 void loop() {
+  if (mqttCmdRechts != nullptr) {
+    motorRechts.setCommand(*mqttCmdRechts);
+    mqttCmdRechts = nullptr;
+    motorTick = true;
+  }
+  if (mqttCmdLinks != nullptr) {
+    motorLinks.setCommand(*mqttCmdLinks);
+    mqttCmdLinks = nullptr;
+    motorTick = true;
+  }
+  
   checkButtons(&motorLinks, &motorRechts);
   if (motorTick) {
     motorLinks.tick();

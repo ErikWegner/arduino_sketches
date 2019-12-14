@@ -6,6 +6,7 @@
 #include <PubSubClient.h>
 
 #include "secret.h"
+#include "motorsteuerung.h"
 
 TaskHandle_t WifiMqttTask;
 
@@ -16,11 +17,25 @@ signed char wifi_reconnect_timeout = 0;
 signed char mqtt_reconnect_timeout = 0;
 long lastRun = 0;
 
+// Set this pointers to a command to tell the other task what to do
+MotorCommand *mqttCmdLinks = nullptr;
+MotorCommand *mqttCmdRechts = nullptr;
+MotorCommand mqttCmdStop = MotorCommands::STOP;
+MotorCommand mqttCmdUp = MotorCommands::MOVE_UP;
+MotorCommand mqttCmdDown = MotorCommands::MOVE_DOWN;
+
 WiFiClientSecure espClient;
 PubSubClient client(espClient);
 
 void connectToWifi();
 void connectToMqtt();
+
+const char leftup[]    = "left-up";
+const char leftdown[]  = "left-down";
+const char leftstop[]  = "left-stop";
+const char rightup[]   = "right-up";
+const char rightdown[] = "right-down";
+const char rightstop[] = "right-stop";
 
 void receivedCallback(char* topic, byte* payload, unsigned int length) {
   Serial.print("Message received: ");
@@ -31,6 +46,40 @@ void receivedCallback(char* topic, byte* payload, unsigned int length) {
     Serial.print((char)payload[i]);
   }
   Serial.println();
+
+  if (length == 10) {
+    if (0 == memcmp(rightdown, payload, length)) {
+      Serial.println("MQTT-Command: right down");
+      mqttCmdRechts = &mqttCmdDown;
+    } else if (0 == memcmp(rightstop, payload, length)) {
+      Serial.println("MQTT-Command: right stop");
+      mqttCmdRechts = &mqttCmdStop;
+    }
+  } else {
+    if (length == 8) {
+      if (0 == memcmp(rightup, payload, length)) {
+        Serial.println("MQTT-Command: right up");
+        mqttCmdRechts = &mqttCmdUp;
+      }
+    } else {
+      if (length == 9) {
+        if (0 == memcmp(leftdown, payload, length)) {
+          Serial.println("MQTT-Command: left down");
+          mqttCmdLinks = &mqttCmdDown;
+        } else if (0 == memcmp(leftstop, payload, length)) {
+          Serial.println("MQTT-Command: left stop");
+          mqttCmdLinks = &mqttCmdStop;
+        }
+      } else {
+        if (length == 7) {
+          if (0 == memcmp(leftup, payload, length)) {
+            Serial.println("MQTT-Command: left up");
+            mqttCmdLinks = &mqttCmdUp;
+          }
+        }
+      } // length == 9
+    }// length == 8
+  } // length == 10
 }
 
 void ensureWifiAndMqtt() {
