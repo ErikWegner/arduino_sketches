@@ -40,10 +40,12 @@ void setup() {
 }
 
 void loop() {
+  client.loop();
   checkButtons(&motorLinks, &motorRechts);
   if (motorTick) {
     motorLinks.tick();
     motorRechts.tick();
     motorTick = false;
+    ensureWifiAndMqtt();
   }
 }
