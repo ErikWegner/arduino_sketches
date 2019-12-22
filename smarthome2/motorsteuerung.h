@@ -29,7 +29,7 @@ typedef MotorsteuerungSTATES::Type MotorsteuerungSTATE;
 #define POWERON LOW
 #define DIRUP LOW
 #define DIRDOWN HIGH
-#define POSITION_UP 20
+#define POSITION_UP 28
 #define POSITION_DOWN 1
 
 class Motorsteuerung
@@ -48,15 +48,15 @@ class Motorsteuerung
     MotorsteuerungSTATE stop();
     MotorsteuerungSTATE up();
     MotorsteuerungSTATE down();
-    int __powerPin;
-    int __dirPin;
+    uint8_t __powerPin;
+    uint8_t __dirPin;
     MotorsteuerungSTATE __targetState;
     MotorsteuerungSTATE __currentState = MotorsteuerungSTATES::UNKNOWN;
     bool __hasKnownState = false;
     bool __powerPinState = HIGH;
     bool __dirPinState = HIGH;
-    int __estimatedPosition = POSITION_UP;
-    signed int __positionDelta = 0;
+    uint16_t __estimatedPosition = POSITION_UP;
+    int8_t __positionDelta = 0;
 };
 
 Motorsteuerung::Motorsteuerung(int powerPin, int dirPin)

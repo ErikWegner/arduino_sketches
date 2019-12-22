@@ -1,4 +1,5 @@
 #include <Bounce2.h>
+#include <Wire.h>
 
 #include "pinlayout.h"
 
@@ -18,6 +19,8 @@ void setupGPIO() {
   debouncerRechtsRunter.attach(BUTTONRECHTSRUNTER, INPUT);
 
   pinMode(LED_BUILTIN, OUTPUT);
+
+  Wire.begin();
 }
 
 void checkButtons(Motorsteuerung *motorLinks, Motorsteuerung *motorRechts) {

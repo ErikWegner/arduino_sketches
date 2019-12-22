@@ -32,4 +32,7 @@ const char* ca_cert = \
 "0ul29sU3heTw4ZXifpbMXRM36LFNH5uLrSba\n" \
 "-----END CERTIFICATE-----\n";
 
+// MD5 value of password: MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
+#define OTAPASSWORDHASH "21232f297a57a5a743894a0e4a801fc3"
+
 #endif

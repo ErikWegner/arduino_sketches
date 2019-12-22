@@ -1,4 +1,5 @@
 // pip install --user esptool
+#include <Adafruit_BMP280.h>
 
 #include "pinlayout.h"
 #include "motorsteuerung.h"
@@ -7,6 +8,12 @@
 volatile bool readButtons = false;
 volatile bool ledState = false;
 volatile bool motorTick = false;
+
+Adafruit_BMP280 bmp;
+#define DEFAULT_SENSOR_WAIT 60
+int readSensorWait = DEFAULT_SENSOR_WAIT;
+float temperature = 0.0;
+float pressure = 0.0;
 
 hw_timer_t * timer = NULL;
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
@@ -33,7 +40,18 @@ void setup() {
   Serial.begin(115200);
   Serial.println(F("Booting"));
   setupGPIO();
-  delay(1500);
+  delay(500);
+  if (!bmp.begin()) {
+    Serial.println(F("Could not find a valid BMP280 sensor, check wiring!"));
+  }
+  /* Default settings from datasheet. */
+  bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
+                  Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
+                  Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
+                  Adafruit_BMP280::FILTER_X16,      /* Filtering. */
+                  Adafruit_BMP280::STANDBY_MS_500); /* Standby time. */
+  setupDisplay();
+
   Serial.println(F("Starting timer"));
   setupTimer();
   setupWifi();
@@ -52,6 +70,7 @@ void loop() {
   }
 
   checkButtons(&motorLinks, &motorRechts);
+  updateDisplay(&motorLinks, &motorRechts);
   if (motorTick) {
     motorLinks.tick();
     motorRechts.tick();
@@ -65,6 +84,18 @@ void loop() {
       publishPositionL = publishLeft;
       publishPositionR = publishRight;
       portEXIT_CRITICAL_ISR(&publishPositionMutex);
+    }
+
+    readSensorWait--;
+    if (readSensorWait < 1) {
+      readSensorWait = DEFAULT_SENSOR_WAIT;
+      if (bmp.begin()) {
+        temperature = bmp.readTemperature();
+        pressure = bmp.readPressure() / 100.0;
+        dtostrf(temperature, 3, 2, temperatureMqtt);
+        dtostrf(pressure, 4, 2, pressureMqtt);
+        sendMqttData = true;
+      }
     }
   }
 }
