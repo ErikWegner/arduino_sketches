@@ -45,7 +45,7 @@ void setup() {
     Serial.println(F("Could not find a valid BMP280 sensor, check wiring!"));
   }
   /* Default settings from datasheet. */
-  bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
+  bmp.setSampling(Adafruit_BMP280::MODE_FORCED,     /* Operating Mode. */
                   Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
                   Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
                   Adafruit_BMP280::FILTER_X16,      /* Filtering. */
@@ -90,6 +90,7 @@ void loop() {
     if (readSensorWait < 1) {
       readSensorWait = DEFAULT_SENSOR_WAIT;
       if (bmp.begin()) {
+        bmp.takeForcedMeasurement();
         temperature = bmp.readTemperature();
         pressure = bmp.readPressure() / 100.0;
         dtostrf(temperature, 3, 2, temperatureMqtt);

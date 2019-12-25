@@ -57,6 +57,7 @@ enum {
   BMP280_REGISTER_VERSION = 0xD1,
   BMP280_REGISTER_SOFTRESET = 0xE0,
   BMP280_REGISTER_CAL26 = 0xE1, /**< R calibration = 0xE1-0xF0 */
+  BMP280_REGISTER_STATUS = 0xF3,
   BMP280_REGISTER_CONTROL = 0xF4,
   BMP280_REGISTER_CONFIG = 0xF5,
   BMP280_REGISTER_PRESSUREDATA = 0xF7,
@@ -163,7 +164,7 @@ public:
 
   float readAltitude(float seaLevelhPa = 1013.25);
 
-  // void takeForcedMeasurement();
+  void takeForcedMeasurement();
 
   void setSampling(sensor_mode mode = MODE_NORMAL,
                    sensor_sampling tempSampling = SAMPLING_X16,

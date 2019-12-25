@@ -395,7 +395,6 @@ float Adafruit_BMP280::seaLevelForAltitude(float altitude, float atmospheric) {
  *  @brief  Take a new measurement (only possible in forced mode)
  *  !!!todo!!!
  */
-/*
 void Adafruit_BMP280::takeForcedMeasurement()
 {
     // If we are in forced mode, the BME sensor goes back to sleep after each
@@ -407,8 +406,10 @@ void Adafruit_BMP280::takeForcedMeasurement()
         write8(BMP280_REGISTER_CONTROL, _measReg.get());
         // wait until measurement has been completed, otherwise we would read
         // the values from the last measurement
-        while (read8(BMP280_REGISTER_STATUS) & 0x08)
+        int timeout = 50;
+        while ((read8(BMP280_REGISTER_STATUS) & 0x08) && timeout > 0) {
                 delay(1);
+                timeout --;
+        }
     }
 }
-*/
