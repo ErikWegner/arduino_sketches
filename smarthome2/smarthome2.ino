@@ -10,8 +10,10 @@ volatile bool ledState = false;
 volatile bool motorTick = false;
 
 Adafruit_BMP280 bmp;
+bool bmpInitialized = false;
 #define DEFAULT_SENSOR_WAIT 60
 int readSensorWait = DEFAULT_SENSOR_WAIT;
+uint16_t sensorReset = 0;
 float temperature = 0.0;
 float pressure = 0.0;
 
@@ -41,15 +43,17 @@ void setup() {
   Serial.println(F("Booting"));
   setupGPIO();
   delay(500);
-  if (!bmp.begin()) {
+  bmpInitialized = bmp.begin();
+  if (!bmpInitialized) {
     Serial.println(F("Could not find a valid BMP280 sensor, check wiring!"));
+  } else {
+    /* Default settings from datasheet. */
+    bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
+                    Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
+                    Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
+                    Adafruit_BMP280::FILTER_X16,      /* Filtering. */
+                    Adafruit_BMP280::STANDBY_MS_500); /* Standby time. */
   }
-  /* Default settings from datasheet. */
-  bmp.setSampling(Adafruit_BMP280::MODE_FORCED,     /* Operating Mode. */
-                  Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
-                  Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
-                  Adafruit_BMP280::FILTER_X16,      /* Filtering. */
-                  Adafruit_BMP280::STANDBY_MS_500); /* Standby time. */
   setupDisplay();
 
   Serial.println(F("Starting timer"));
@@ -86,11 +90,24 @@ void loop() {
       portEXIT_CRITICAL_ISR(&publishPositionMutex);
     }
 
+    sensorReset += 1;
     readSensorWait--;
     if (readSensorWait < 1) {
       readSensorWait = DEFAULT_SENSOR_WAIT;
-      if (bmp.begin()) {
-        bmp.takeForcedMeasurement();
+      // https://github.com/adafruit/Adafruit_BMP280_Library/pull/33
+      /*
+       * https://github.com/adafruit/Adafruit_BMP280_Library/pull/33
+       * If sensor.getStatus() returns 0xFF -> call reset() and begin()
+       * If not initialized and 5 minutes past -> reset()+begin()
+       */
+      if ((!bmpInitialized && sensorReset > 300) || (bmp.getStatus() == 0xFF)) {
+        // Reset
+        bmp.reset();
+        delay(150);
+        sensorReset = 0;
+        bmpInitialized = bmp.begin();
+      }
+      if (bmpInitialized) {
         temperature = bmp.readTemperature();
         pressure = bmp.readPressure() / 100.0;
         dtostrf(temperature, 3, 2, temperatureMqtt);
