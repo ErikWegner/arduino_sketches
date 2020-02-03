@@ -1,5 +1,5 @@
 // pip install --user esptool
-#include <Adafruit_BMP280.h>
+#include <Adafruit_BME280.h>
 
 #include "pinlayout.h"
 #include "motorsteuerung.h"
@@ -9,7 +9,7 @@ volatile bool readButtons = false;
 volatile bool ledState = false;
 volatile bool motorTick = false;
 
-Adafruit_BMP280 bmp;
+Adafruit_BME280 bmp;
 bool bmpInitialized = false;
 #define DEFAULT_SENSOR_WAIT 60
 int readSensorWait = DEFAULT_SENSOR_WAIT;
@@ -45,14 +45,7 @@ void setup() {
   delay(500);
   bmpInitialized = bmp.begin();
   if (!bmpInitialized) {
-    Serial.println(F("Could not find a valid BMP280 sensor, check wiring!"));
-  } else {
-    /* Default settings from datasheet. */
-    bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
-                    Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
-                    Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
-                    Adafruit_BMP280::FILTER_X16,      /* Filtering. */
-                    Adafruit_BMP280::STANDBY_MS_500); /* Standby time. */
+    Serial.println(F("Could not find a valid BME280 sensor, check wiring!"));
   }
   setupDisplay();
 
@@ -100,10 +93,8 @@ void loop() {
        * If sensor.getStatus() returns 0xFF -> call reset() and begin()
        * If not initialized and 5 minutes past -> reset()+begin()
        */
-      if ((!bmpInitialized && sensorReset > 300) || (bmp.getStatus() == 0xFF)) {
+      if (!bmpInitialized && sensorReset > 300) {
         // Reset
-        bmp.reset();
-        delay(150);
         sensorReset = 0;
         bmpInitialized = bmp.begin();
       }
