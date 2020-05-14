@@ -130,7 +130,10 @@ function go_main()
         dofile("device.config.lua")
         m = mqtt.Client("r1", 60, MQTT_USERNAME, MQTT_PASSWORD)
         m:on("connect", function(client) print ("mqtt connected") end)
-        m:on("offline", function(client) print ("mqtt offline") end)
+        m:on("offline", function(client)
+            print ("mqtt offline")
+            do_mqtt_connect()
+        end)
         showText('Connecting...')
         station_cfg={}
         station_cfg.ssid = WIFI_SSID
