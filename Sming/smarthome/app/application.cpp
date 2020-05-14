@@ -1,20 +1,15 @@
 #include <SmingCore.h>
-#include <Libraries/BME280/BME280.h>
-#include <Libraries/Adafruit_SSD1306/Adafruit_SSD1306.h>
 
-// SDA <-> D4
-// SCL <-> D3
 #define LED_PIN 16
 #define MOTORLINKSPOWER 5 // D1, GPIO5
 #define MOTORLINKSRICHTUNG 4 // D2, GPIO4
 #define MOTORRECHTSPOWER 14 // D5, GPIO14
 #define MOTORRECHTSRICHTUNG 12 // D6, GPIO12
-#define BUTTONLINKSHOCH 13 // D7, GPIO13
-#define BUTTONLINKSRUNTER 15 // D8, GPIO15
-#define BUTTONRECHTSHOCH 10 // SD3, GPIO10
-#define BUTTONRECHTSRUNTER 9 // SD2, GPIO9
-#define BUFFERLENGTH_STATUS 20
-#define BUFFERLENGTH_SENSORLINE 20
+#define BUTTONLINKSHOCH 0 // D3, GPIO0
+#define BUTTONLINKSRUNTER 2 // D4, GPIO2
+#define BUTTONRECHTSHOCH 13 // D7, GPIO13
+#define BUTTONRECHTSRUNTER 15 // D8, GPIO15
+
 #include "secrets.h"
 #include <ssl/private_key.h>
 #include <ssl/cert.h>
@@ -24,11 +19,7 @@ Timer procTimer, reconnectMqtt;
 bool state = true;
 bool startingMqtt = false;
 int blinkCounter = 0;
-float temperature = 0.0;
-float pressure = 0.0;
 const Url url(MQTT_URL);
-char statusText[BUFFERLENGTH_STATUS];
-char sensorLine[BUFFERLENGTH_SENSORLINE];
 
 bool leftUp = false;
 bool leftDown = false;
@@ -42,25 +33,13 @@ void reconnectMQTT(bool flag);
 void clearInterruptStates();
 
 MqttClient mqtt;
-NtpClient* ntpClient;
-BME280 bme;
-Adafruit_SSD1306 display(-1);
 Motorsteuerung motorLinks(MOTORLINKSPOWER, MOTORLINKSRICHTUNG);
 Motorsteuerung motorRechts(MOTORRECHTSPOWER, MOTORRECHTSRICHTUNG);
 
-void updateDisplay() {
-	display.clearDisplay();
-	display.setCursor(0,0);
-	display.println(statusText);
-	display.println(sensorLine);
-	display.display();
-}
-
 void displayStatus(const char* text) {
 	Serial.println(text);
-	strncpy(statusText, text, BUFFERLENGTH_STATUS);
-	updateDisplay();
 }
+
 void publishInt(const char* topic, int v)
 {
 	Serial.println(_F("Publishing data..."));
@@ -80,108 +59,43 @@ void publishInt(const char* topic, int v)
 	Serial.println(_F("Data send"));
 }
 
-void publishFloat(const char* topic, float v) 
-{
-	Serial.println(_F("Publishing data..."));
-
-	if(mqtt.getConnectionState() != eTCS_Connected) {
-		Serial.println(_F("Disconnected, not sending data."));
-		reconnectMQTT(true);
-		return;
-	}
-
-	#define PUBLISH_FLOAT_BUFFER_LENGTH 10
-	char svalue[PUBLISH_FLOAT_BUFFER_LENGTH];
-	m_snprintf(svalue, PUBLISH_FLOAT_BUFFER_LENGTH, "%.1f", v);
-	Serial.print(_F("Value is "));
-	Serial.println(svalue);
-	mqtt.publish(topic, svalue, MQTT_FLAG_RETAINED);
-	Serial.println(_F("Data send"));
-}
-
-void publishTemperature() 
-{
-	publishFloat("/d/r1/sensors/temp", temperature);
-}
-
-void publishPressure() 
-{
-    publishFloat("/d/r1/sensors/pressure", pressure);
-}
-
-void updateSensorLine()
-{
-	m_snprintf(sensorLine, BUFFERLENGTH_SENSORLINE, "%.1f hPA  %.1f 'C", pressure, temperature);
-	updateDisplay();
-}
-
-void readTemperatur()
-{
-	temperature = bme.GetTemperature();
-	Serial.print("T: ");
-	Serial.println(temperature);
-	System.queueCallback(publishTemperature);
-}
-
-void readPressure()
-{
-	pressure = bme.GetPressure() / 100.0;
-	Serial.print(temperature);
-	Serial.print(" P: ");
-	Serial.println(pressure);
-	System.queueCallback(publishPressure);
-}
-
-void readSensors()
-{
-	Serial.println(_F("Reading sensors"));
-	readTemperatur();
-	readPressure();
-	updateSensorLine();
-}
-
 void readButtons() {
 	clearInterruptStates();
 
-	if (digitalRead(BUTTONLINKSHOCH) == HIGH && leftUp == false) {
-		Serial.println("Links hoch");
-		leftUp = true;
-		leftDown = false;
+	bool btnLinksHochActive = digitalRead(BUTTONLINKSHOCH) == HIGH;
+	bool btnLinksRunterActive = digitalRead(BUTTONLINKSRUNTER) == HIGH;
+	bool btnRechtsHochActive = digitalRead(BUTTONRECHTSHOCH) == HIGH;
+	bool btnRechtsRunterActive = digitalRead(BUTTONRECHTSRUNTER) == HIGH;
+
+	if (btnLinksHochActive && leftUp == false) {
+		Serial.println("Taster: Links hoch");
 		motorLinks.setCommand(MotorCommands::MOVE_UP);
 	}
-	if (digitalRead(BUTTONLINKSRUNTER) == HIGH && leftDown == false) {
-		Serial.println("Links runter");
-		leftUp = false;
-		leftDown = true;
+	if (btnLinksRunterActive && leftDown == false) {
+		Serial.println("Taster: Links runter");
 		motorLinks.setCommand(MotorCommands::MOVE_DOWN);
 	}
+	leftUp = btnLinksHochActive;
+	leftDown = btnLinksRunterActive;
 	if (leftUp == false && leftDown == false) {
-		Serial.println("Links stops");
+		Serial.println("Taster: Links stops");
 		motorLinks.setCommand(MotorCommands::STOP);
 	}
 
-	if (digitalRead(BUTTONRECHTSHOCH) == HIGH && rightUp == false) {
-		Serial.println("Rechts hoch");
-		rightUp = true;
-		rightDown = false;
+	if (btnRechtsHochActive && rightUp == false) {
+		Serial.println("Taster: Rechts hoch");
 		motorRechts.setCommand(MotorCommands::MOVE_UP);
 	}
-	if (digitalRead(BUTTONRECHTSRUNTER) == HIGH && rightDown == false) {
-		Serial.println("Rechts runter");
-		rightUp = false;
-		rightDown = true;
+	if (btnRechtsRunterActive && rightDown == false) {
+		Serial.println("Taster: Rechts runter");
 		motorRechts.setCommand(MotorCommands::MOVE_DOWN);
 	}
+	rightUp = btnRechtsHochActive;
+	rightDown = btnRechtsRunterActive;
 	if (rightUp == false && rightDown == false) {
-		Serial.println("Rechts stops");
+		Serial.println("Taster: Rechts stops");
 		motorRechts.setCommand(MotorCommands::STOP);
 	}
-
-	Serial.print("BUTTONLINKSHOCH ");
-	Serial.print(digitalRead(BUTTONLINKSHOCH));
-	Serial.print("BUTTONLINKSRUNTER ");
-	Serial.print(digitalRead(BUTTONLINKSRUNTER));
-	Serial.println();
 }
 
 void blink()
@@ -192,34 +106,17 @@ void blink()
 	//Serial.println(SystemClock.getSystemTimeString());
 	if (blinkCounter >= 60) {
 		blinkCounter = 0;
-		System.queueCallback(readSensors);
 	}
-	yield();
 	if (buttonInterruptTriggered) {
 		readButtons();
 	}
-	yield();
 	motorLinks.tick();
-	yield();
 	if (motorLinks.publishPosition()) {
 		publishInt("/d/r1/position/left", motorLinks.estimatedPosition());
 	}
-	yield();
 	motorRechts.tick();
 	if (motorRechts.publishPosition()) {
 		publishInt("/d/r1/position/right", motorRechts.estimatedPosition());
-	}
-	yield();
-}
-
-void initSensor() {
-	bme = BME280();
-	if (bme.EnsureConnected()) {
-		bme.SoftReset();
-		bme.Initialize();
-		System.queueCallback(readSensors);
-	} else {
-		displayStatus("Sensor not found");
 	}
 }
 
@@ -320,7 +217,6 @@ void connectOk(IpAddress ip, IpAddress mask, IpAddress gateway)
 	Serial.print(_F("WiFi "));
 	Serial.println(ip);
 	displayStatus(("WiFi"));
-	ntpClient = new NtpClient("pool.ntp.org", 30);
 	startMqttClient();
 }
 
@@ -336,17 +232,6 @@ void init()
 
 	pinMode(LED_PIN, OUTPUT);
 	procTimer.initializeMs(1000, blink).start();
-
-	display.begin(SSD1306_SWITCHCAPVCC, 0x3C, false);
-	display.clearDisplay();
-	display.setTextColor(WHITE);
-	display.setTextSize(1);
-	display.setCursor(0, 0);
-	display.println("Booting...");
-	display.display();
-	display.dim(true);
-
-	initSensor();
 
 	// Station - WiFi client
 	WifiStation.config(_F(WIFI_SSID), _F(WIFI_PWD));

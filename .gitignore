@@ -2,4 +2,4 @@ nodemcu/*/device.config*.lua
 smarthome1/settings.h
 secret.h
 secrets.h
-
+out/
