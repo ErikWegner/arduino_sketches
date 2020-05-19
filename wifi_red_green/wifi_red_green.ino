@@ -5,6 +5,7 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #include <PubSubClient.h>
+#include "ota.h"
 #include <Adafruit_GFX.h>
 #include "Adafruit_LEDBackpack.h"
 
@@ -20,6 +21,12 @@ const char* mqtt_pass =   MQTT_PASSWORD;
 
 //echo | openssl s_client -connect server:8883 | openssl x509 -fingerprint -noout
 const char* mqtt_fprint = "33:B5:1D:6A:C3:7D:88:04:FC:16:63:4D:2E:75:25:DF:80:39:AD:F5";
+
+#define TASK_DELAY 50
+#define DEFAULT_TIMEOUT (5 * 1000 / TASK_DELAY)
+int8_t mqtt_reconnect_timeout = 0;
+
+bool startOTA = true;
 
 WiFiClientSecure espClient;
 PubSubClient client(espClient);
@@ -42,35 +49,18 @@ void setup() {
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    Serial.print(".");
+    Serial.print(F("."));
   }
 
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
+  Serial.println(F(""));
+  Serial.println(F("WiFi connected"));
+  Serial.println(F("IP address: "));
   Serial.println(WiFi.localIP());
   digitalWrite(D4, LOW);
 
   espClient.setFingerprint(mqtt_fprint);
   client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
-
-  while (!client.connected()) {
-    Serial.print("Attempting MQTT connection...");
-    verifyFingerprint();
-    if (client.connect(WiFi.macAddress().c_str(), mqtt_user, mqtt_pass, "/d/r2/alive", 0, 1, "off", true)) {
-      Serial.println("connected");
-      client.publish("/d/r1/alive", "on", true);
-      client.subscribe("/d/r2/color");
-      digitalWrite(D0, LOW);
-    } else {
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
-      delay(5000);
-    }
-  }
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -120,14 +110,31 @@ void verifyFingerprint() {
 uint16_t counter = 0;
 
 void loop() {
-  client.loop();
-
-  if (counter == 0) {
-    client.publish("/d/r2/alive", "on", true);
+  if (startOTA) {
+    startOTA = false;
+    setupOTA();
   }
-  counter = (counter + 1) % 600;
+  handleOTA();
 
-  delay(100);
+  if (client.connected()) {
+    client.loop();
+    if (counter == 0) {
+      client.publish("/d/r2/alive", "on", true);
+    }
+    counter = (counter + 1) % 600;
+
+    delay(100);
+  } else {
+    if (mqtt_reconnect_timeout > 0)
+    {
+      Serial.print(F("MQTT reconnect timeout = "));
+      Serial.println(mqtt_reconnect_timeout);
+      mqtt_reconnect_timeout--;
+    } else {
+      mqtt_reconnect_timeout = DEFAULT_TIMEOUT;
+      connectToMqtt();
+    }
+  }
 }
 
 void barColor(uint8_t bc) {
@@ -136,4 +143,19 @@ void barColor(uint8_t bc) {
   }
   bar.writeDisplay();
 
+}
+
+
+void connectToMqtt() {
+  Serial.println(F("Connecting to MQTT broker..."));
+  verifyFingerprint();
+  if (client.connect(MQTT_CLIENTNAME, MQTT_USERNAME, MQTT_PASSWORD, "/d/r2/alive", 0, 1, "off", true)) {
+    Serial.println(F("connected"));
+    client.publish("/d/r2/alive", "on", true);
+    client.subscribe("/d/r2/color");
+    digitalWrite(D0, LOW);
+  } else {
+    Serial.print(F("failed, rc="));
+    Serial.print(client.state());
+  }
 }
