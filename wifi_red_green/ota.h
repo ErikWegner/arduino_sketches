@@ -9,6 +9,7 @@ void setupOTA() {
   ArduinoOTA.setPasswordHash(OTAPASSWORDHASH);
   ArduinoOTA
   .onStart([]() {
+    wifi_set_sleep_type(NONE_SLEEP_T);
     String type;
     if (ArduinoOTA.getCommand() == U_FLASH)
       type = "sketch";

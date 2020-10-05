@@ -20,13 +20,17 @@ const char* mqtt_user =   MQTT_USERNAME;
 const char* mqtt_pass =   MQTT_PASSWORD;
 
 //echo | openssl s_client -connect server:8883 | openssl x509 -fingerprint -noout
-const char* mqtt_fprint = "33:B5:1D:6A:C3:7D:88:04:FC:16:63:4D:2E:75:25:DF:80:39:AD:F5";
+const char* mqtt_fprint = "B1:9D:1D:47:C6:01:06:71:7F:51:63:0B:61:19:67:E9:70:07:CF:7F";
 
 #define TASK_DELAY 50
 #define DEFAULT_TIMEOUT (5 * 1000 / TASK_DELAY)
 int8_t mqtt_reconnect_timeout = 0;
 
 bool startOTA = true;
+
+extern "C" {
+  #include "user_interface.h"
+}
 
 WiFiClientSecure espClient;
 PubSubClient client(espClient);
@@ -38,6 +42,7 @@ void setup() {
   bar.begin(0x71);
   bar.clear();
   barColor(LED_GREEN);
+  wifi_set_sleep_type(LIGHT_SLEEP_T);
 
   pinMode(D4, OUTPUT);
   digitalWrite(D4, HIGH);
