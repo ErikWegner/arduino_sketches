@@ -20,6 +20,15 @@ signed char mqtt_reconnect_timeout = 0;
 WiFiClientSecure espClient;
 PubSubClient client(espClient);
 
+
+enum commstate {
+  OFFL,
+  WLAN,
+  MQTT, 
+};
+volatile commstate comm = OFFL;
+const char* commstateStr[] = {"Offl", "WLAN", "MQTT"};
+
 void WiFiEventHandler(WiFiEvent_t event) {
   Serial.printf("[WiFi-event] event: %d\n", event);
   switch (event) {
@@ -29,6 +38,7 @@ void WiFiEventHandler(WiFiEvent_t event) {
       Serial.println(WiFi.localIP());
       isWifiConnected = true;
       // TODO: LCD output
+      comm = WLAN;
       /*
           Calling connectToMqtt() here gives a
           Guru Meditation Error: Core  1 panic'ed (Unhandled debug exception)
@@ -39,6 +49,7 @@ void WiFiEventHandler(WiFiEvent_t event) {
       Serial.println("WiFi lost connection");
       // TODO: LCD output
       isWifiConnected = false;
+      comm = OFFL;
       wifi_reconnect_timeout = DEFAULT_TIMEOUT;
       break;
   }
@@ -61,11 +72,11 @@ void connectToMqtt() {
   if (client.connect(MQTT_CLIENTNAME, MQTT_USERNAME, MQTT_PASSWORD, "/d/r4/alive", 0, 1, "off", true)) {
     Serial.println(F("mqtt connected"));
     client.publish("/d/r4/alive", "on", true);
-    // TODO: LCD output
+    comm = MQTT;
   } else {
     Serial.print(F("failed, status code ="));
     Serial.print(client.state());
-    // TODO: LCD output
+    comm = isWifiConnected ? WLAN : OFFL;
   }
 }
 
