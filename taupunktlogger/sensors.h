@@ -1,3 +1,5 @@
+#ifndef SENSORS
+#define SENSORS
 
 // *******  Korrekturwerte der einzelnen Sensorwerte  *******
 #define Korrektur_t_1  0 // Korrekturwert Innensensor Temperatur
@@ -15,13 +17,14 @@
 #define DHTTYPE_1 DHT22 // DHT 22
 #define DHTTYPE_2 DHT22 // DHT 22
 
-float tempInside = 22.4;
-float tempOutside = 12.3;
-float humInside = 98.1;
-float humOutside = 12.1;
-bool lueftung = true;
+volatile float tempInside = 0.0;
+volatile float tempOutside = 0.0;
+volatile float humInside = 0.0;
+volatile float humOutside = 0.0;
+volatile bool lueftung = false;
+volatile bool sendMqttData = false;
 
-byte fehler = 0;
+volatile byte fehler = 0;
 String sensorError = "";
 
 #include "DHT.h"
@@ -104,6 +107,8 @@ void readSensors() {
   humInside = min(99.9f, h1);
   humOutside = min(99.9f, h2);
 
+  sendMqttData = true;
+
   // Werteausgabe auf Serial Monitor
   Serial.print(F("Sensor-1: " ));
   Serial.print(F("Luftfeuchtigkeit: "));
@@ -135,3 +140,5 @@ void readSensors() {
   if (t1 < TEMP1_min) lueftung = false;
   if (t2 < TEMP2_min) lueftung = false;
 }
+
+#endif

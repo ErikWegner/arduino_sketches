@@ -8,8 +8,8 @@
  * G21: LCD/SDA
  * G22: LCD/SCL
  * 
- * G17: DHT22 inside
- * G16: DHT22 outside
+ * G17: DHT22 inside (sensor 1)
+ * G16: DHT22 outside (sensor 2)
  * 
  * Libraries:
  * https://github.com/duinoWitchery/hd44780 version 1.3.2

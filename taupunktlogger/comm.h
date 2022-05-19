@@ -4,8 +4,8 @@
 
 #include "secret.h"
 #include "ota.h"
+#include "sensors.h"
 
-bool sendMqttData = false;
 bool syncRequest = false;
 
 TaskHandle_t WifiMqttTask;
@@ -24,7 +24,7 @@ PubSubClient client(espClient);
 enum commstate {
   OFFL,
   WLAN,
-  MQTT, 
+  MQTT,
 };
 volatile commstate comm = OFFL;
 const char* commstateStr[] = {"Offl", "WLAN", "MQTT"};
@@ -37,7 +37,6 @@ void WiFiEventHandler(WiFiEvent_t event) {
       Serial.println("IP address: ");
       Serial.println(WiFi.localIP());
       isWifiConnected = true;
-      // TODO: LCD output
       comm = WLAN;
       /*
           Calling connectToMqtt() here gives a
@@ -78,6 +77,14 @@ void connectToMqtt() {
   }
 }
 
+void publishFloat(const char* topic, float v)
+{
+#define PUBLISH_FLOAT_BUFFER_LENGTH 4
+  char svalue[PUBLISH_FLOAT_BUFFER_LENGTH+1];
+  dtostrf(v, PUBLISH_FLOAT_BUFFER_LENGTH, 1, svalue);
+  client.publish(topic, svalue, true);
+}
+
 void ensureWifiAndMqtt() {
   if (!isWifiConnected) {
     if (wifi_reconnect_timeout > 0) {
@@ -99,11 +106,11 @@ void ensureWifiAndMqtt() {
 
   if (client.connected()) {
     client.loop();
-    
+
   } else if (mqtt_reconnect_timeout > 0)
   {
-//    Serial.print(F("MQTT reconnect timeout = "));
-//    Serial.println(mqtt_reconnect_timeout);
+    //    Serial.print(F("MQTT reconnect timeout = "));
+    //    Serial.println(mqtt_reconnect_timeout);
     mqtt_reconnect_timeout--;
   } else {
     mqtt_reconnect_timeout = DEFAULT_TIMEOUT;
@@ -120,8 +127,11 @@ void ensureWifiAndMqttTask(void * pvParameters) {
     delay(TASK_DELAY);
     if (sendMqttData || syncRequest) {
       sendMqttData = false;
-      client.publish((const char*)F("/d/r4/sensors/inside"), ""); // TODO: values
-      client.publish((const char*)F("/d/r4/sensors/outside"), ""); // TODO: values
+      client.publish((const char*)F("/d/r4/sensors/window"), (const char*)(lueftung ? F("auf") : F("zu")));
+      publishFloat((const char*)F("/d/r4/sensors/insidetemp"), tempInside);
+      publishFloat((const char*)F("/d/r4/sensors/insidehum"), humInside);
+      publishFloat((const char*)F("/d/r4/sensors/outsidetemp"), tempOutside);
+      publishFloat((const char*)F("/d/r4/sensors/outsidehum"), humOutside);
     }
     if (syncRequest) {
       client.publish("/d/r4/alive", "on", true);
