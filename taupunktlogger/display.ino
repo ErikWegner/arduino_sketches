@@ -8,6 +8,7 @@
 #define lcdWidth 16
 hd44780_I2Cexp lcd(0x27); // declare lcd object: auto locate & auto config expander chip
 
+// Made with: https://kakedev.github.io/GlyphGenerator/
 const PROGMEM uint8_t customchar[2][8] = {
   // Umlaut ü
   {0x0a, 0x00, 0x11, 0x11, 0x11, 0x13, 0x0d, 0x00},
@@ -42,8 +43,8 @@ void updateDisplay() {
   if (currentMillis - lastDisplaySwitch >= 1500) {
     sensorOutput = (sensorOutput + 1) % 2;
     lastDisplaySwitch = currentMillis;
-    Serial.print("sensor Output = ");
-    Serial.println(sensorOutput);
+//    Serial.print("sensor Output = ");
+//    Serial.println(sensorOutput);
   }
 
   char buffer[16];
@@ -67,7 +68,7 @@ void updateDisplay() {
     buffer[4] = ',';
     buffer[13] = ',';
   }
-  
+
   // First line
   lcd.setCursor(0, 0);
   if (lueftung) {
@@ -80,7 +81,11 @@ void updateDisplay() {
   // Second line
   lcd.setCursor(0, 1);
 
-  for (byte col = 0; col < lcdWidth; col++) {
-    lcd.write(buffer[col]);
+  if (fehler > 0) {
+    lcd.print(sensorError);
+  } else {
+    for (byte col = 0; col < lcdWidth; col++) {
+      lcd.write(buffer[col]);
+    }
   }
 }

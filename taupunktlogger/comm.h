@@ -61,13 +61,11 @@ void connectToWifi() {
   }
 
   Serial.println("Connecting to Wi-Fi...");
-  //TODO: output LCD
   WiFi.begin(WIFI_SSID, WIFI_PWD);
 }
 
 void connectToMqtt() {
   Serial.println(F("Connecting to MQTT broker..."));
-  // TODO: LCD output
 
   if (client.connect(MQTT_CLIENTNAME, MQTT_USERNAME, MQTT_PASSWORD, "/d/r4/alive", 0, 1, "off", true)) {
     Serial.println(F("mqtt connected"));

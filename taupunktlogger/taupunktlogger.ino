@@ -8,6 +8,9 @@
  * G21: LCD/SDA
  * G22: LCD/SCL
  * 
+ * G17: DHT22 inside
+ * G16: DHT22 outside
+ * 
  * Libraries:
  * https://github.com/duinoWitchery/hd44780 version 1.3.2
  * 
@@ -16,16 +19,16 @@
 #include "comm.h"
 #include "sensors.h"
 
-volatile bool lueftung = true;
-
 void setup() {
   Serial.begin(115200);
   Serial.println("Booting");
   setupDisplay();
+  setupSensors();
   setupWifi();
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
   updateDisplay();
+  readSensors();
+  delay(100);
 }
