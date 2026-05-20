@@ -1,7 +1,7 @@
 #include <ArduinoOTA.h>
 
 void setupOTA() {
-  ArduinoOTA.setPasswordHash(OTAPASSWORDHASH);
+  ArduinoOTA.setPassword(OTAPASSWORD);
   ArduinoOTA
   .onStart([]() {
     String type;

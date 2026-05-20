@@ -60,6 +60,7 @@ void connectToWifi() {
   }
 
   Serial.println("Connecting to Wi-Fi...");
+  WiFi.setHostname(WIFI_HOSTNAME);
   WiFi.begin(WIFI_SSID, WIFI_PWD);
 }
 

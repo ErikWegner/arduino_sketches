@@ -1,5 +1,6 @@
 #define WIFI_SSID "SSID" // Put you SSID here
 #define WIFI_PWD "12345678" // Put you WiFi password here
+#define WIFI_HOSTNAME "esp-001"
 
 #define MQTT_SERVER "mqtt.example.org"
 #define MQTT_PORT 8883
@@ -31,5 +32,4 @@ const char* ca_cert = \
 "0ul29sU3heTw4ZXifpbMXRM36LFNH5uLrSba\n" \
 "-----END CERTIFICATE-----\n";
 
-// MD5 value of password: MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
-#define OTAPASSWORDHASH "21232f297a57a5a743894a0e4a801fc3"
+#define OTAPASSWORD "ota-for-the-win"
