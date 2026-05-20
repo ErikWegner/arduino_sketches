@@ -32,7 +32,7 @@ const char* commstateStr[] = {"Offl", "WLAN", "MQTT"};
 void WiFiEventHandler(WiFiEvent_t event) {
   Serial.printf("[WiFi-event] event: %d\n", event);
   switch (event) {
-    case SYSTEM_EVENT_STA_GOT_IP:
+    case IP_EVENT_STA_GOT_IP:
       Serial.println("WiFi connected");
       Serial.println("IP address: ");
       Serial.println(WiFi.localIP());
@@ -44,7 +44,7 @@ void WiFiEventHandler(WiFiEvent_t event) {
           Debug exception reason: Stack canary watchpoint triggered (network_event)
       */
       break;
-    case SYSTEM_EVENT_STA_DISCONNECTED:
+    case WIFI_EVENT_STA_DISCONNECTED:
       Serial.println("WiFi lost connection");
       // TODO: LCD output
       isWifiConnected = false;

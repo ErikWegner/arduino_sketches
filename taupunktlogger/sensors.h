@@ -87,11 +87,11 @@ void readSensors() {
     fehler = 8; // number of ticks to show error
     if (isnan(h1) || isnan(t1) || h1 > 100 || h1 < 1 || t1 < -40 || t1 > 80 )  {
       Serial.println(F("Fehler beim Auslesen vom 1. Sensor!"));
-      sensorError = F("Fehler Sensor 1");
+      sensorError = F("Fehler Sensor I ");
     }
     if (isnan(h2) || isnan(t2) || h2 > 100 || h2 < 1 || t2 < -40 || t2  > 80)  {
       Serial.println(F("Fehler beim Auslesen vom 2. Sensor!"));
-      sensorError = F("Fehler Sensor 2");
+      sensorError = F("Fehler Sensor A ");
     }
   }
 
